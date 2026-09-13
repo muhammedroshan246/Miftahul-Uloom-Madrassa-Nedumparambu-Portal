@@ -104,7 +104,10 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(user.role)) {
+    const isSadrAllowed = user.role === 'SADR' && (allowedRoles.includes('OFFICE_ADMIN') || allowedRoles.includes('SUPER_ADMIN') || allowedRoles.includes('STAFF') || allowedRoles.includes('SADR'));
+    const isSuperAdmin = user.role === 'SUPER_ADMIN';
+    
+    if (!allowedRoles.includes(user.role) && !isSadrAllowed && !isSuperAdmin) {
       return NextResponse.json({ error: 'Forbidden. Insufficient permissions.' }, { status: 403 });
     }
   }

@@ -39,11 +39,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    const isSadr = user.role === 'SADR' || user.username === 'sadr' || user.username === 'jabir.baqavi';
+
     // Role check if portal specified
-    if (portal === 'office' && !['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(String(user.role))) {
+    if (portal === 'sadr' && !isSadr && !['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(String(user.role))) {
+      return NextResponse.json({ error: 'Access denied: Not authorized for Sadr Portal' }, { status: 403 });
+    }
+    if (portal === 'office' && !['SUPER_ADMIN', 'OFFICE_ADMIN', 'SADR'].includes(String(user.role)) && !isSadr) {
       return NextResponse.json({ error: 'Access denied: Not authorized for Office Portal' }, { status: 403 });
     }
-    if (portal === 'staff' && String(user.role) !== 'STAFF' && !['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(String(user.role))) {
+    if (portal === 'staff' && String(user.role) !== 'STAFF' && !['SUPER_ADMIN', 'OFFICE_ADMIN', 'SADR'].includes(String(user.role)) && !isSadr) {
       return NextResponse.json({ error: 'Access denied: Not authorized for Staff Portal' }, { status: 403 });
     }
     if (portal === 'student' && String(user.role) !== 'STUDENT') {
@@ -70,13 +75,15 @@ export async function POST(req: NextRequest) {
         classId = Number(sRes.rows[0].class_id);
         sectionId = Number(sRes.rows[0].section_id);
       }
-    } else if (user.role === 'STAFF') {
+    } else if (user.role === 'STAFF' || user.role === 'SADR' || isSadr) {
       const tRes = await db.execute({
-        sql: 'SELECT id FROM teachers WHERE user_id = ? LIMIT 1',
+        sql: 'SELECT id FROM teachers WHERE user_id = ? OR id = 28 LIMIT 1',
         args: [user.id]
       });
       if (tRes.rows.length > 0) {
         teacherId = Number(tRes.rows[0].id);
+      } else if (isSadr) {
+        teacherId = 28;
       }
     } else if (user.role === 'PARENT') {
       const pRes = await db.execute({
@@ -91,7 +98,7 @@ export async function POST(req: NextRequest) {
     const payload: TokenPayload = {
       id: Number(user.id),
       username: String(user.username),
-      role: user.role as any,
+      role: (isSadr ? 'SADR' : user.role) as any,
       full_name: String(user.full_name),
       email: user.email ? String(user.email) : undefined,
       phone: user.phone ? String(user.phone) : undefined,
@@ -106,15 +113,16 @@ export async function POST(req: NextRequest) {
 
     await logAudit({
       user: payload,
-      action: 'LOGIN_SUCCESS',
+      action: isSadr ? 'SADR_LOGIN' : (user.role === 'STAFF' ? 'STAFF_LOGIN' : 'LOGIN_SUCCESS'),
       module: 'Auth',
       targetId: String(user.id),
-      newValue: { username: user.username, role: user.role, portal: portal || 'default' }
+      newValue: { username: user.username, role: payload.role, portal: portal || 'default', isSadr }
     });
 
     const response = NextResponse.json({
       success: true,
       user: payload,
+      isSadr,
       token,
     });
 

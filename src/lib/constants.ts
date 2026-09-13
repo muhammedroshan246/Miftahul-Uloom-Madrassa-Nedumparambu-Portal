@@ -8,6 +8,7 @@ export const MONTHLY_FEE_AMOUNT = 100; // Rs. 100 per student per month
 export const ROLES = {
   SUPER_ADMIN: "SUPER_ADMIN",
   OFFICE_ADMIN: "OFFICE_ADMIN",
+  SADR: "SADR",
   STAFF: "STAFF",
   STUDENT: "STUDENT",
   PARENT: "PARENT",

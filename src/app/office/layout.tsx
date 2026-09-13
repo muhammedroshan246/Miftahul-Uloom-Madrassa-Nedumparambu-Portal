@@ -68,7 +68,7 @@ export default function OfficeLayout({ children }: { children: React.ReactNode }
           return;
         }
         const data = await res.json();
-        if (!['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(data.user?.role)) {
+        if (!['SUPER_ADMIN', 'OFFICE_ADMIN', 'SADR'].includes(data.user?.role)) {
           if (isMounted) {
             setAuthError(true);
             setLoading(false);
@@ -224,8 +224,22 @@ export default function OfficeLayout({ children }: { children: React.ReactNode }
             </Link>
           </div>
 
+          {/* Sadr Dual Portal Switcher */}
+          {(user?.role === 'SADR' || user?.role === 'SUPER_ADMIN' || user?.username === 'sadr' || user?.username === 'jabir.baqavi') && (
+            <div className="px-3 pt-3">
+              <Link
+                href="/staff"
+                onClick={() => setSidebarOpen(false)}
+                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 border border-amber-400/40 shadow-md transition-all"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Switch to Staff Portal</span>
+              </Link>
+            </div>
+          )}
+
           {/* Quick Action Admission CTA */}
-          <div className="px-3 pt-3">
+          <div className="px-3 pt-2">
             <Link
               href="/office/admission"
               onClick={() => setSidebarOpen(false)}

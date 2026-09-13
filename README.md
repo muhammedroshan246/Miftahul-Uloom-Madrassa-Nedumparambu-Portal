@@ -91,13 +91,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🔐 Default Portals & Access
+## 🔐 Portals & Access Overview
 
-| Portal | URL | Login Method | Default Credentials |
+| Portal | URL | Login Method | Default Credentials / Selection |
 | :--- | :--- | :--- | :--- |
-| **Student Portal** | `/login?portal=student` | 3-Step Selection (No Password) | Select Class $\rightarrow$ Wing $\rightarrow$ Name |
-| **Staff / Usthad** | `/login?portal=staff` | 6-Digit PIN | e.g. `naseeruddeen` / `482731` |
-| **Office Admin** | `/login?portal=office` | Username + Password | `sadr` / `Sadr@5090` |
+| **Student / Parent** | `/login?portal=student` | 3-Step Selection (No Password) | Select Class (1–10, +1, +2) $\rightarrow$ Boys/Girls Wing $\rightarrow$ Student Name |
+| **Staff / Usthad** | `/login?portal=staff` | Usthad Dropdown + 6-Digit PIN | Select Usthad $\rightarrow$ Enter PIN (e.g. `naseeruddeen` / `482731`) |
+| **Sadr Usthad** | `/login?portal=sadr` | Sadr Profile + Dual Portal Selector | `sadr` / `Sadr@5090` $\rightarrow$ Dual Access to Office ERP & Staff Portal |
+| **Office Admin** | `/login?portal=office` | Office Username + Password | `office` / `office123` or `admin` / `admin123` |
 
 ---
 

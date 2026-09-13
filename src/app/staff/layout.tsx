@@ -16,7 +16,9 @@ import {
   GraduationCap,
   LogIn,
   Banknote,
-  CreditCard
+  CreditCard,
+  Building2,
+  RefreshCw
 } from 'lucide-react';
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
@@ -49,7 +51,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           return;
         }
         const data = await res.json();
-        if (!['STAFF', 'SUPER_ADMIN', 'OFFICE_ADMIN'].includes(data.user?.role)) {
+        if (!['STAFF', 'SUPER_ADMIN', 'OFFICE_ADMIN', 'SADR'].includes(data.user?.role)) {
           if (isMounted) {
             setAuthError(true);
             setLoading(false);
@@ -141,7 +143,18 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Usthad Badge & Desktop Nav */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Sadr Dual Portal Switcher */}
+          {(user?.role === 'SADR' || user?.role === 'SUPER_ADMIN' || user?.username === 'sadr' || user?.username === 'jabir.baqavi') && (
+            <Link
+              href="/office"
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition-all"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Switch to Office ERP</span>
+            </Link>
+          )}
+
           <div className="hidden sm:flex items-center gap-2 text-xs">
             <span className="text-emerald-200">Assigned:</span>
             <span className="font-bold text-amber-300">{user?.full_name || 'Usthad'}</span>

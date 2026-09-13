@@ -88,7 +88,8 @@ export async function seedInitialData(db: Client) {
   if (Array.isArray(initialData.users)) {
     for (const u of initialData.users) {
       await db.execute({
-        sql: `INSERT OR IGNORE INTO users (id, username, password_hash, role, full_name, email, phone, avatar_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO users (id, username, password_hash, role, full_name, email, phone, avatar_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET role = excluded.role, full_name = excluded.full_name, avatar_url = COALESCE(excluded.avatar_url, users.avatar_url)`,
         args: [u.id, u.username, u.password_hash, u.role, u.full_name, u.email, u.phone, u.avatar_url, u.is_active]
       });
     }

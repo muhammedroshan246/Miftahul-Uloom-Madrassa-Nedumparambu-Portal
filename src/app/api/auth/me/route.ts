@@ -28,10 +28,11 @@ export async function GET(req: NextRequest) {
       args: [user.student_id]
     });
     details.student = sRes.rows[0] || null;
-  } else if (user.role === 'STAFF' && user.teacher_id) {
+  } else if ((user.role === 'STAFF' || user.role === 'SADR' || user.teacher_id) && (user.teacher_id || user.role === 'SADR' || user.username === 'sadr')) {
+    const tId = user.teacher_id || 28;
     const tRes = await db.execute({
       sql: 'SELECT * FROM teachers WHERE id = ?',
-      args: [user.teacher_id]
+      args: [tId]
     });
     const assignRes = await db.execute({
       sql: `
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
         JOIN subjects sub ON ta.subject_id = sub.id
         WHERE ta.teacher_id = ?
       `,
-      args: [user.teacher_id]
+      args: [tId]
     });
     // Find if class teacher of any section
     const ctRes = await db.execute({
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
         JOIN classes c ON sec.class_id = c.id
         WHERE sec.class_teacher_id = ?
       `,
-      args: [user.teacher_id]
+      args: [tId]
     });
 
     details.teacher = tRes.rows[0] || null;
