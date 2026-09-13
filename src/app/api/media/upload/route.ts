@@ -6,6 +6,8 @@ import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { getDb } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const ALLOWED_MIME_TYPES: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/jpg': '.jpg',

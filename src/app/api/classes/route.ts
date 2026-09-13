@@ -3,6 +3,8 @@ import { getDb } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const db = getDb();

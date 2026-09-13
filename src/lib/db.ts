@@ -1,21 +1,215 @@
 import { createClient, Client } from '@libsql/client';
 import path from 'path';
+import fs from 'fs';
+import initialData from './initialData.json';
 
-let client: Client;
+let client: Client | null = null;
+let isInitialized = false;
+
+function resolveDatabaseConfig(): { url: string; authToken?: string } {
+  const envUrl = process.env.DATABASE_URL;
+  const authToken = process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_TOKEN;
+
+  // 1. Remote Database (Turso / LibSQL Cloud / Remote HTTP)
+  if (envUrl && (envUrl.startsWith('libsql://') || envUrl.startsWith('https://') || envUrl.startsWith('http://') || envUrl.startsWith('wss://'))) {
+    return {
+      url: envUrl,
+      authToken: authToken || undefined,
+    };
+  }
+
+  // 2. Local / Serverless File Mode
+  const possibleSourcePaths = [
+    path.resolve(process.cwd(), 'madrassa.db'),
+    path.resolve(process.cwd(), 'public', 'madrassa.db'),
+    path.resolve(__dirname, '..', '..', 'madrassa.db'),
+    path.resolve(__dirname, '..', '..', '..', 'madrassa.db'),
+  ];
+
+  let sourceDbPath: string | null = null;
+  for (const p of possibleSourcePaths) {
+    if (fs.existsSync(p) && fs.statSync(p).size > 0) {
+      sourceDbPath = p;
+      break;
+    }
+  }
+
+  // On Vercel / AWS Lambda, /var/task is read-only. We copy to /tmp for read-write access
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+
+  if (isServerless) {
+    const tmpDbPath = path.join('/tmp', 'madrassa.db');
+    try {
+      if (sourceDbPath && (!fs.existsSync(tmpDbPath) || fs.statSync(tmpDbPath).size === 0)) {
+        fs.copyFileSync(sourceDbPath, tmpDbPath);
+        console.log(`[DB] Copied source database (${fs.statSync(sourceDbPath).size} bytes) from ${sourceDbPath} to ${tmpDbPath}`);
+      }
+    } catch (e: any) {
+      console.warn('[DB] Warning while copying database to /tmp:', e?.message);
+    }
+
+    if (fs.existsSync(tmpDbPath)) {
+      return { url: `file:${tmpDbPath}` };
+    }
+  }
+
+  if (sourceDbPath) {
+    return { url: `file:${sourceDbPath}` };
+  }
+
+  // Fallback to default in working directory
+  const defaultPath = path.resolve(process.cwd(), 'madrassa.db');
+  return { url: `file:${defaultPath}` };
+}
 
 export function getDb(): Client {
   if (!client) {
-    const dbPath = process.env.DATABASE_URL || 'file:./madrassa.db';
-    client = createClient({
-      url: dbPath,
-    });
+    const config = resolveDatabaseConfig();
+    console.log('[DB] Connecting to database:', config.url.replace(/\/\/[^@]+@/, '//***@'));
+    client = createClient(config);
   }
   return client;
 }
 
+export async function seedInitialData(db: Client) {
+  console.log('[DB] Running automatic data seeding...');
+  
+  // 1. Academic Years
+  if (Array.isArray(initialData.academic_years)) {
+    for (const ay of initialData.academic_years) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO academic_years (id, name, is_current, start_date, end_date) VALUES (?, ?, ?, ?, ?)`,
+        args: [ay.id, ay.name, ay.is_current, ay.start_date, ay.end_date]
+      });
+    }
+  }
+
+  // 2. Users
+  if (Array.isArray(initialData.users)) {
+    for (const u of initialData.users) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO users (id, username, password_hash, role, full_name, email, phone, avatar_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [u.id, u.username, u.password_hash, u.role, u.full_name, u.email, u.phone, u.avatar_url, u.is_active]
+      });
+    }
+  }
+
+  // 3. Classes
+  if (Array.isArray(initialData.classes)) {
+    for (const c of initialData.classes) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO classes (id, name, display_order, numeric_order) VALUES (?, ?, ?, ?)`,
+        args: [c.id, c.name, c.display_order, c.numeric_order]
+      });
+    }
+  }
+
+  // 4. Sections
+  if (Array.isArray(initialData.sections)) {
+    for (const s of initialData.sections) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO sections (id, class_id, name, gender, class_teacher_id) VALUES (?, ?, ?, ?, ?)`,
+        args: [s.id, s.class_id, s.name, s.gender, s.class_teacher_id]
+      });
+    }
+  }
+
+  // 5. Teachers
+  if (Array.isArray(initialData.teachers)) {
+    for (const t of initialData.teachers) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO teachers (id, user_id, staff_id, full_name, gender, phone, email, qualification, designation, photo_url, joining_date, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [t.id, t.user_id, t.staff_id, t.full_name, t.gender, t.phone, t.email, t.qualification, t.designation, t.photo_url, t.joining_date, t.is_active]
+      });
+    }
+  }
+
+  // 6. Teacher Assignments
+  if (Array.isArray(initialData.teacher_assignments)) {
+    for (const ta of initialData.teacher_assignments) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO teacher_assignments (id, teacher_id, section_id, subject_id) VALUES (?, ?, ?, ?)`,
+        args: [ta.id, ta.teacher_id, ta.section_id, ta.subject_id]
+      });
+    }
+  }
+
+  // 7. Subjects
+  if (Array.isArray(initialData.subjects)) {
+    for (const sub of initialData.subjects) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO subjects (id, name, code, class_id) VALUES (?, ?, ?, ?)`,
+        args: [sub.id, sub.name, sub.code, sub.class_id]
+      });
+    }
+  }
+
+  // 8. Parents
+  if (Array.isArray(initialData.parents)) {
+    for (const p of initialData.parents) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO parents (id, user_id, father_name, mother_name, guardian_name, primary_phone, alt_phone, address, emergency_contact) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [p.id, p.user_id, p.father_name, p.mother_name, p.guardian_name, p.primary_phone, p.alt_phone, p.address, p.emergency_contact]
+      });
+    }
+  }
+
+  // 9. Students (ALL 303 STUDENTS)
+  if (Array.isArray(initialData.students)) {
+    for (const st of initialData.students) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO students (id, user_id, admission_no, roll_no, full_name, dob, gender, class_id, section_id, photo_url, admission_date, status, academic_year_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [st.id, st.user_id, st.admission_no, st.roll_no, st.full_name, st.dob, st.gender, st.class_id, st.section_id, st.photo_url, st.admission_date, st.status || 'Active', st.academic_year_id, st.parent_id]
+      });
+    }
+  }
+
+  // 10. Exams
+  if (Array.isArray(initialData.exams)) {
+    for (const ex of initialData.exams) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO exams (id, academic_year_id, name, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [ex.id, ex.academic_year_id, ex.name, ex.start_date, ex.end_date, ex.status]
+      });
+    }
+  }
+
+  // 11. Exam Subjects
+  if (Array.isArray(initialData.exam_subjects)) {
+    for (const es of initialData.exam_subjects) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO exam_subjects (id, exam_id, subject_id, class_id, max_marks, pass_marks) VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [es.id, es.exam_id, es.subject_id, es.class_id, es.max_marks, es.pass_marks]
+      });
+    }
+  }
+
+  // 12. Website Settings
+  if (Array.isArray(initialData.website_settings)) {
+    for (const ws of initialData.website_settings) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO website_settings (key, value) VALUES (?, ?)`,
+        args: [ws.key, ws.value]
+      });
+    }
+  }
+
+  // 13. Staff Permissions
+  if (Array.isArray((initialData as any).staff_permissions)) {
+    for (const sp of (initialData as any).staff_permissions) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO staff_permissions (id, teacher_id, section_id, can_manage_marks, can_manage_attendance) VALUES (?, ?, ?, ?, ?)`,
+        args: [sp.id, sp.teacher_id, sp.section_id, sp.can_manage_marks, sp.can_manage_attendance]
+      });
+    }
+  }
+
+  console.log('[DB] Seeding completed successfully!');
+}
+
 export async function initDb() {
   const db = getDb();
-  
+
   // Enable foreign keys
   await db.execute('PRAGMA foreign_keys = ON;');
 
@@ -90,7 +284,7 @@ export async function initDb() {
     );
   `);
 
-  // 6. Sections table (Each class has Boys and Girls sections)
+  // 6. Sections table
   await db.execute(`
     CREATE TABLE IF NOT EXISTS sections (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,7 +309,7 @@ export async function initDb() {
     );
   `);
 
-  // 8. Teacher Assignments (Subjects and Classes assigned to teacher)
+  // 8. Teacher Assignments
   await db.execute(`
     CREATE TABLE IF NOT EXISTS teacher_assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -239,7 +433,7 @@ export async function initDb() {
     );
   `);
 
-  // 15. Fees table (Rs. 100/mo)
+  // 15. Fees table
   await db.execute(`
     CREATE TABLE IF NOT EXISTS fees (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -319,7 +513,7 @@ export async function initDb() {
     );
   `);
 
-  // 20. Correction Requests (from Students/Parents)
+  // 20. Correction Requests table
   await db.execute(`
     CREATE TABLE IF NOT EXISTS correction_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -362,7 +556,7 @@ export async function initDb() {
     );
   `);
 
-  // 23. Salaries / Payroll table
+  // 23. Salaries table
   await db.execute(`
     CREATE TABLE IF NOT EXISTS salaries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -386,7 +580,21 @@ export async function initDb() {
     );
   `);
 
-  // Create useful indexes for fast search and query performance
+  // 24. Staff Permissions table
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS staff_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id INTEGER NOT NULL,
+      section_id INTEGER NOT NULL,
+      can_manage_marks INTEGER DEFAULT 1,
+      can_manage_attendance INTEGER DEFAULT 1,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
+      FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE,
+      UNIQUE(teacher_id, section_id)
+    );
+  `);
+
+  // Indexes
   await db.execute('CREATE INDEX IF NOT EXISTS idx_students_class_section ON students(class_id, section_id);');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_students_admission_no ON students(admission_no);');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date, section_id);');
@@ -394,6 +602,37 @@ export async function initDb() {
   await db.execute('CREATE INDEX IF NOT EXISTS idx_marks_exam_student ON marks(exam_id, student_id);');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_salaries_month_status ON salaries(month, status);');
+  await db.execute('CREATE INDEX IF NOT EXISTS idx_staff_permissions ON staff_permissions(teacher_id, section_id);');
 
-  console.log('Database initialized successfully with all tables and indexes.');
+  // Check if students exist, if not seed initial data
+  const sCheck = await db.execute('SELECT count(*) as c FROM students');
+  const count = Number(sCheck.rows[0]?.c || 0);
+  if (count === 0) {
+    console.log('[DB] Students table is empty. Triggering automatic data seeding...');
+    await seedInitialData(db);
+  } else {
+    console.log(`[DB] Database verified. Found ${count} enrolled students.`);
+  }
+
+  isInitialized = true;
+  return db;
+}
+
+export async function ensureDbReady(): Promise<Client> {
+  const db = getDb();
+  if (isInitialized) return db;
+
+  try {
+    const res = await db.execute('SELECT count(*) as c FROM students');
+    const count = Number(res.rows[0]?.c || 0);
+    if (count > 0) {
+      isInitialized = true;
+      return db;
+    }
+  } catch (err) {
+    console.log('[DB] Schema check failed, running initDb()...');
+  }
+
+  await initDb();
+  return db;
 }

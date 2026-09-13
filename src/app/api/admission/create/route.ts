@@ -5,6 +5,8 @@ import { requireAuth, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { MONTHS, MONTHLY_FEE_AMOUNT } from '@/lib/constants';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ['SUPER_ADMIN', 'OFFICE_ADMIN']);
   if ('status' in auth) return auth;

@@ -5,6 +5,8 @@ import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { getDb } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const CATEGORIES = ['branding', 'hero', 'principal', 'gallery', 'events', 'teachers', 'achievements', 'students'];
 
 export async function GET(req: NextRequest) {

@@ -3,6 +3,8 @@ import { getDb } from '@/lib/db';
 import { requireAuth, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req);
   if ('status' in auth) return auth;

@@ -5,6 +5,8 @@ import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { MONTHS, MONTHLY_FEE_AMOUNT } from '@/lib/constants';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const db = getDb();

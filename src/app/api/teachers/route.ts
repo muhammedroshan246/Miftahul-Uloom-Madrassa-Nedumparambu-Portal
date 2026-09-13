@@ -4,6 +4,8 @@ import { requireAuth, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { generateSecure6DigitPassword } from '@/lib/password';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ['SUPER_ADMIN', 'OFFICE_ADMIN']);
   if ('status' in auth) return auth;

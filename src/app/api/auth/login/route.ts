@@ -4,6 +4,8 @@ import { getDb } from '@/lib/db';
 import { verifyPassword, signToken, createAuthCookie, TokenPayload } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { username, password, portal } = await req.json();

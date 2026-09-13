@@ -61,22 +61,31 @@ export default function StudentSelectionFlow() {
   const [errorMsg, setErrorMsg] = useState('');
 
   // Initial load: fetch classes and sections
-  useEffect(() => {
-    async function loadClasses() {
-      setLoadingData(true);
-      try {
-        const res = await fetch('/api/public/student-roster');
-        if (res.ok) {
-          const data = await res.json();
-          setClasses(data.classes || []);
-          setSections(data.sections || []);
+  const loadClasses = async () => {
+    setLoadingData(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/public/student-roster');
+      if (res.ok) {
+        const data = await res.json();
+        setClasses(data.classes || []);
+        setSections(data.sections || []);
+        if (!data.classes || data.classes.length === 0) {
+          setErrorMsg('No active classes found. Please contact Madrassa administration.');
         }
-      } catch (err) {
-        console.error('Failed to load classes:', err);
-      } finally {
-        setLoadingData(false);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setErrorMsg(errData.error || 'Failed to load Madrassa classes. Please try again.');
       }
+    } catch (err: any) {
+      console.error('Failed to load classes:', err);
+      setErrorMsg('Network error connecting to Madrassa portal. Please check your connection.');
+    } finally {
+      setLoadingData(false);
     }
+  };
+
+  useEffect(() => {
     loadClasses();
   }, []);
 
@@ -85,6 +94,7 @@ export default function StudentSelectionFlow() {
     setSelectedClass(cls);
     setSelectedSection(null);
     setSearchQuery('');
+    setErrorMsg('');
     setStep(2);
   };
 
@@ -92,6 +102,7 @@ export default function StudentSelectionFlow() {
   const handleSelectSection = async (sec: SectionItem) => {
     setSelectedSection(sec);
     setSearchQuery('');
+    setErrorMsg('');
     setLoadingStudents(true);
     setStep(3);
 
@@ -100,9 +111,13 @@ export default function StudentSelectionFlow() {
       if (res.ok) {
         const data = await res.json();
         setStudents(data.students || []);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setErrorMsg(errData.error || 'Failed to load student list for this section.');
       }
     } catch (err) {
       console.error('Failed to load students:', err);
+      setErrorMsg('Network error loading students. Please try again.');
     } finally {
       setLoadingStudents(false);
     }
@@ -155,6 +170,26 @@ export default function StudentSelectionFlow() {
         <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Loading Madrassa Classes & Sections...
         </div>
+      </div>
+    );
+  }
+
+  if (errorMsg && classes.length === 0) {
+    return (
+      <div className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200/80 text-center space-y-4 max-w-md mx-auto">
+        <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-extrabold text-sm text-slate-900">Unable to load classes</h3>
+          <p className="text-xs text-slate-500">{errorMsg}</p>
+        </div>
+        <button
+          onClick={loadClasses}
+          className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

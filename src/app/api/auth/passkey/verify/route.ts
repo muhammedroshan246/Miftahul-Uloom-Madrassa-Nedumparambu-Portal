@@ -4,6 +4,8 @@ import { getDb } from '@/lib/db';
 import { signToken, createAuthCookie, getSessionUser, TokenPayload } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { mode, credential, username } = await req.json();
