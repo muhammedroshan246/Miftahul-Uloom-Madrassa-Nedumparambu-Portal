@@ -43,7 +43,7 @@ export default function OfficeAnnouncementsPage() {
       if (statusFilter !== 'All') params.set('status', statusFilter);
       if (audienceFilter !== 'All') params.set('audience', audienceFilter);
 
-      const res = await fetch(`/api/announcements?${params.toString()}`);
+      const res = await fetch(`/api/announcements?${params.toString()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data.announcements || []);

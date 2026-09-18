@@ -65,40 +65,68 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'fees') {
-      const res = await db.execute(`
-        SELECT f.month, f.amount, f.status, f.paid_amount, f.payment_date, f.payment_mode, f.receipt_no,
-               s.admission_no, s.full_name, s.roll_no, c.name as class_name, sec.name as section_name, p.primary_phone
-        FROM fees f
-        JOIN students s ON f.student_id = s.id
+      const month = searchParams.get('month') || 'September 2026';
+      let feeQuery = `
+        SELECT 
+          s.roll_no,
+          s.full_name,
+          s.admission_no,
+          c.name as class_name,
+          sec.name as section_name,
+          COALESCE(f.month, ?) as month,
+          COALESCE(f.amount, 100) as amount,
+          COALESCE(f.paid_amount, 0) as paid_amount,
+          (COALESCE(f.amount, 100) - COALESCE(f.paid_amount, 0)) as balance,
+          COALESCE(f.status, 'Pending') as status,
+          f.payment_date,
+          f.payment_mode,
+          f.receipt_no,
+          p.primary_phone
+        FROM students s
         JOIN classes c ON s.class_id = c.id
         JOIN sections sec ON s.section_id = sec.id
         LEFT JOIN parents p ON s.parent_id = p.id
-        ORDER BY c.numeric_order ASC, sec.name ASC, s.roll_no ASC, f.id ASC
-      `);
+        LEFT JOIN fees f ON f.student_id = s.id AND f.month = ?
+        WHERE s.status = 'Active'
+      `;
+      const feeArgs: any[] = [month, month];
+      if (classId && classId !== 'All') {
+        feeQuery += ' AND s.class_id = ?';
+        feeArgs.push(Number(classId));
+      }
+      if (gender && gender !== 'All') {
+        feeQuery += ' AND sec.name = ?';
+        feeArgs.push(gender.trim());
+      }
+      feeQuery += ' ORDER BY c.numeric_order ASC, sec.name ASC, s.roll_no ASC';
+
+      const res = await db.execute({ sql: feeQuery, args: feeArgs });
 
       if (format === 'csv') {
-        const headers = ['Admission No', 'Student Name', 'Class', 'Section', 'Month', 'Amount', 'Status', 'Paid Amount', 'Payment Date', 'Payment Mode', 'Receipt No', 'Phone'];
+        const headers = ['Roll No', 'Student Name', 'Admission No', 'Class', 'Wing', 'Month', 'Fee Due', 'Amount Paid', 'Balance', 'Status', 'Payment Date', 'Payment Mode', 'Receipt No'];
         const csvRows = [headers.join(',')];
         for (const r of res.rows) {
           csvRows.push([
-            `"${r.admission_no || ''}"`,
+            r.roll_no,
             `"${r.full_name || ''}"`,
+            `"${r.admission_no || ''}"`,
             `"${r.class_name || ''}"`,
             r.section_name,
             `"${r.month || ''}"`,
-            r.amount,
+            `"₹${r.amount}"`,
+            `"₹${r.paid_amount}"`,
+            `"₹${r.balance}"`,
             r.status,
-            r.paid_amount,
-            r.payment_date || '',
-            r.payment_mode || '',
-            `"${r.receipt_no || ''}"`,
-            `"${r.primary_phone || ''}"`
+            r.payment_date || '-',
+            r.payment_mode || '-',
+            `"${r.receipt_no || ''}"`
           ].join(','));
         }
+        const safeMonth = month.replace(/[^a-zA-Z0-9]/g, '_');
         return new NextResponse(csvRows.join('\n'), {
           headers: {
             'Content-Type': 'text/csv',
-            'Content-Disposition': `attachment; filename="fee_report_${Date.now()}.csv"`
+            'Content-Disposition': `attachment; filename="fee_register_${safeMonth}_${Date.now()}.csv"`
           }
         });
       }

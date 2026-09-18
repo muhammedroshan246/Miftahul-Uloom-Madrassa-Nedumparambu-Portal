@@ -65,7 +65,7 @@ export default function StudentsDirectoryPage() {
       if (selectedGender !== 'All') params.set('gender', selectedGender);
       params.set('status', selectedStatus);
 
-      const res = await fetch(`/api/students?${params.toString()}`);
+      const res = await fetch(`/api/students?${params.toString()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setStudents(data.students || []);

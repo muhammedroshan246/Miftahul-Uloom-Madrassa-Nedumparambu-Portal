@@ -205,6 +205,96 @@ export async function seedInitialData(db: Client) {
     }
   }
 
+  // 14. Passkey Credentials
+  if (Array.isArray((initialData as any).passkey_credentials)) {
+    for (const pk of (initialData as any).passkey_credentials) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO passkey_credentials (id, user_id, credential_id, public_key, counter, transports, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [pk.id, pk.user_id, pk.credential_id, pk.public_key, pk.counter, pk.transports, pk.created_at]
+      });
+    }
+  }
+
+  // 15. Salaries
+  if (Array.isArray((initialData as any).salaries)) {
+    for (const sal of (initialData as any).salaries) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO salaries (id, teacher_id, academic_year_id, month, basic_salary, allowance, deduction, other_adjustment, net_salary, status, payment_date, payment_mode, payment_reference, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [sal.id, sal.teacher_id, sal.academic_year_id, sal.month, sal.basic_salary, sal.allowance, sal.deduction, sal.other_adjustment || 0, sal.net_salary, sal.status, sal.payment_date, sal.payment_mode, sal.payment_reference, sal.notes, sal.created_at, sal.updated_at]
+      });
+    }
+  }
+
+  // 16. Fees
+  if (Array.isArray((initialData as any).fees)) {
+    for (const f of (initialData as any).fees) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO fees (id, student_id, academic_year_id, month, amount, status, paid_amount, payment_date, payment_mode, payment_reference, receipt_no, collected_by_user_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [f.id, f.student_id, f.academic_year_id, f.month, f.amount, f.status, f.paid_amount, f.payment_date, f.payment_mode, f.payment_reference, f.receipt_no, f.collected_by_user_id, f.updated_at]
+      });
+    }
+  }
+
+  // 17. Attendance
+  if (Array.isArray((initialData as any).attendance)) {
+    for (const att of (initialData as any).attendance) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO attendance (id, student_id, section_id, date, status, remarks, marked_by_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [att.id, att.student_id, att.section_id, att.date, att.status, att.remarks, att.marked_by_user_id, att.created_at, att.updated_at]
+      });
+    }
+  }
+
+  // 18. Marks
+  if (Array.isArray((initialData as any).marks)) {
+    for (const m of (initialData as any).marks) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO marks (id, exam_id, subject_id, student_id, marks_obtained, grade, is_pass, remarks, entered_by_user_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [m.id, m.exam_id, m.subject_id, m.student_id, m.marks_obtained, m.grade, m.is_pass, m.remarks, m.entered_by_user_id, m.status, m.created_at, m.updated_at]
+      });
+    }
+  }
+
+  // 19. Announcements
+  if (Array.isArray((initialData as any).announcements)) {
+    for (const ann of (initialData as any).announcements) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO announcements (id, title, content, priority, target_audience, is_published, published_at, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [ann.id, ann.title, ann.content, ann.priority, ann.target_audience, ann.is_published, ann.published_at, ann.created_by_user_id]
+      });
+    }
+  }
+
+  // 20. Events
+  if (Array.isArray((initialData as any).events)) {
+    for (const ev of (initialData as any).events) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO events (id, title, description, event_date, event_time, location, image_url, is_published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [ev.id, ev.title, ev.description, ev.event_date, ev.event_time, ev.location, ev.image_url, ev.is_published, ev.created_at]
+      });
+    }
+  }
+
+  // 21. Gallery
+  if (Array.isArray((initialData as any).gallery)) {
+    for (const g of (initialData as any).gallery) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO gallery (id, title, category, image_url, event_id, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [g.id, g.title, g.category, g.image_url, g.event_id, g.created_at]
+      });
+    }
+  }
+
+  // 22. Achievements
+  if (Array.isArray((initialData as any).achievements)) {
+    for (const ach of (initialData as any).achievements) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO achievements (id, student_id, title, competition_event, position, date, description, certificate_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [ach.id, ach.student_id, ach.title, ach.competition_event, ach.position, ach.date, ach.description, ach.certificate_url, ach.created_at]
+      });
+    }
+  }
+
   console.log('[DB] Seeding completed successfully!');
 }
 
@@ -557,6 +647,12 @@ export async function initDb() {
     );
   `);
 
+  await db.execute(`
+    INSERT OR IGNORE INTO website_settings (key, value) VALUES 
+    ('standard_monthly_fee', '100'),
+    ('fee_currency', '₹');
+  `);
+
   // 23. Salaries table
   await db.execute(`
     CREATE TABLE IF NOT EXISTS salaries (
@@ -567,6 +663,7 @@ export async function initDb() {
       basic_salary REAL NOT NULL DEFAULT 0,
       allowance REAL NOT NULL DEFAULT 0,
       deduction REAL NOT NULL DEFAULT 0,
+      other_adjustment REAL NOT NULL DEFAULT 0,
       net_salary REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Paid', 'Pending', 'Processing')),
       payment_date DATE,
@@ -580,6 +677,13 @@ export async function initDb() {
       UNIQUE(teacher_id, month)
     );
   `);
+
+  // Safe migrations for newly added columns
+  try {
+    await db.execute('ALTER TABLE salaries ADD COLUMN other_adjustment REAL DEFAULT 0;');
+  } catch (e) {
+    // Column already exists
+  }
 
   // 24. Staff Permissions table
   await db.execute(`
@@ -605,13 +709,19 @@ export async function initDb() {
   await db.execute('CREATE INDEX IF NOT EXISTS idx_salaries_month_status ON salaries(month, status);');
   await db.execute('CREATE INDEX IF NOT EXISTS idx_staff_permissions ON staff_permissions(teacher_id, section_id);');
 
-  // Check if students exist, if not seed initial data
+  // Check if database needs initial seeding
   const sCheck = await db.execute('SELECT count(*) as c FROM students');
   const count = Number(sCheck.rows[0]?.c || 0);
   if (count === 0) {
     console.log('[DB] Students table is empty. Triggering automatic data seeding...');
     await seedInitialData(db);
   } else {
+    // Also check if salaries or other tables need initial seed
+    const salCheck = await db.execute('SELECT count(*) as c FROM salaries');
+    if (Number(salCheck.rows[0]?.c || 0) === 0) {
+      console.log('[DB] Salaries table is empty. Seeding initial data...');
+      await seedInitialData(db);
+    }
     console.log(`[DB] Database verified. Found ${count} enrolled students.`);
   }
 

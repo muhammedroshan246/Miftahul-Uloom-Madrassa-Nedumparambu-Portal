@@ -40,7 +40,7 @@ export default function OfficeAttendancePage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const res = await fetch('/api/classes');
+        const res = await fetch('/api/classes', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setClasses(data.classes || []);
@@ -70,17 +70,17 @@ export default function OfficeAttendancePage() {
         const url = secId 
           ? `/api/attendance?sectionId=${secId}&date=${date}`
           : `/api/attendance?classId=${selectedClassId}&gender=${selectedGender}&date=${date}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) setDailyData(await res.json());
       } else if (viewMode === 'monthly') {
         const secId = currentSection?.id;
         const url = secId 
           ? `/api/attendance?view=monthly&sectionId=${secId}&month=${selectedMonth}`
           : `/api/attendance?view=monthly&classId=${selectedClassId}&gender=${selectedGender}&month=${selectedMonth}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) setMonthlyData(await res.json());
       } else {
-        const res = await fetch(`/api/attendance?date=${date}`);
+        const res = await fetch(`/api/attendance?date=${date}`, { cache: 'no-store' });
         if (res.ok) setMatrixData(await res.json());
       }
     } catch (e) {

@@ -48,7 +48,7 @@ export default function OfficePayrollPage() {
       if (selectedStatus !== 'All') params.set('status', selectedStatus);
       if (search) params.set('search', search);
 
-      const res = await fetch(`/api/payroll?${params.toString()}`);
+      const res = await fetch(`/api/payroll?${params.toString()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setSalaries(data.salaries || []);
@@ -88,13 +88,14 @@ export default function OfficePayrollPage() {
       if (res.ok) {
         setActionMsg(data.message);
         setSelectedMonth(targetMonth.trim());
-        loadPayroll();
+        await loadPayroll();
         setTimeout(() => setActionMsg(''), 4000);
       } else {
         alert(data.error || 'Failed to generate payroll');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert('Network error: ' + err.message);
     } finally {
       setGenerating(false);
     }
@@ -117,11 +118,15 @@ export default function OfficePayrollPage() {
       });
       if (res.ok) {
         setActionMsg(`Salary voucher marked as PAID for ${teacherName}`);
-        loadPayroll();
+        await loadPayroll();
         setTimeout(() => setActionMsg(''), 3000);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to update salary voucher');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert('Network error: ' + err.message);
     }
   };
 
@@ -136,11 +141,15 @@ export default function OfficePayrollPage() {
       if (res.ok) {
         setEditModal(null);
         setActionMsg('Salary voucher updated successfully!');
-        loadPayroll();
+        await loadPayroll();
         setTimeout(() => setActionMsg(''), 3000);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to save salary voucher');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert('Network error: ' + err.message);
     }
   };
 

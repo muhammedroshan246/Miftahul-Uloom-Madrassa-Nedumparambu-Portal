@@ -54,9 +54,9 @@ export default function OfficeMarksPage() {
   const loadMeta = async () => {
     try {
       const [eRes, cRes, sRes] = await Promise.all([
-        fetch('/api/exams'),
-        fetch('/api/classes'),
-        fetch('/api/subjects?status=active')
+        fetch('/api/exams', { cache: 'no-store' }),
+        fetch('/api/classes', { cache: 'no-store' }),
+        fetch('/api/subjects?status=active', { cache: 'no-store' })
       ]);
 
       let firstClassId = '';
@@ -116,7 +116,7 @@ export default function OfficeMarksPage() {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/marks?examId=${selectedExamId}&sectionId=${activeSection.id}&subjectId=${selectedSubjectId}`);
+      const res = await fetch(`/api/marks?examId=${selectedExamId}&sectionId=${activeSection.id}&subjectId=${selectedSubjectId}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setStudents(data.students || []);

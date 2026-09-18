@@ -47,7 +47,7 @@ export default function OfficeMadrassaInfoPage() {
   useEffect(() => {
     async function loadInfo() {
       try {
-        const res = await fetch('/api/madrassa-info');
+        const res = await fetch('/api/madrassa-info', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.info) {
