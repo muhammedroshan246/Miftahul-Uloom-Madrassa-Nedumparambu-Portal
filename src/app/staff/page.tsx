@@ -134,28 +134,28 @@ export default function StaffDashboardPage() {
 
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                 <Link
-                  href={`/staff/attendance`}
+                  href={`/staff/attendance?classId=${sec.class_id}&sectionId=${sec.id}`}
                   className="py-2.5 px-3 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
                   <CalendarCheck className="w-3.5 h-3.5" />
                   <span>Attendance</span>
                 </Link>
                 <Link
-                  href={`/staff/marks`}
+                  href={`/staff/marks?classId=${sec.class_id}&sectionId=${sec.id}`}
                   className="py-2.5 px-3 rounded-xl bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                   <span>Marks Entry</span>
                 </Link>
                 <Link
-                  href={`/staff/fees`}
+                  href={`/staff/fees?classId=${sec.class_id}&wing=${sec.name}`}
                   className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
                   <span>Fees (₹100)</span>
                 </Link>
                 <Link
-                  href={`/staff/students`}
+                  href={`/staff/students?classId=${sec.class_id}&sectionId=${sec.id}`}
                   className="py-2.5 px-3 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Users className="w-3.5 h-3.5" />

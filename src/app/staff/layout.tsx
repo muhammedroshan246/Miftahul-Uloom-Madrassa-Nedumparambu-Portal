@@ -166,6 +166,11 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 {teacher.assigned_class_name} ({teacher.assigned_wing || 'Boys'})
               </span>
             )}
+            {teacher?.assigned_class_name_2 && (
+              <span className="px-2 py-0.5 rounded-full bg-blue-800 text-amber-300 text-[10px] font-bold border border-blue-700">
+                {teacher.assigned_class_name_2} ({teacher.assigned_wing_2 || 'Girls'})
+              </span>
+            )}
           </div>
 
           <button

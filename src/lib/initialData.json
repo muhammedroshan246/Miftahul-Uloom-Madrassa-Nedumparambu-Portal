@@ -4191,7 +4191,10 @@
       "show_phone_publicly": 0,
       "assigned_class_id": 36,
       "assigned_wing": "Boys",
-      "assigned_section_id": 71
+      "assigned_section_id": 71,
+      "assigned_class_id_2": null,
+      "assigned_wing_2": "Boys",
+      "assigned_section_id_2": null
     },
     {
       "id": 29,
@@ -4206,11 +4209,14 @@
       "photo_url": null,
       "joining_date": "2026-06-01",
       "is_active": 1,
-      "assigned_classes": "Class 6, Class 9",
+      "assigned_classes": "Class 6 (Boys), Class 9 (Girls)",
       "show_phone_publicly": 0,
       "assigned_class_id": 30,
       "assigned_wing": "Boys",
-      "assigned_section_id": 59
+      "assigned_section_id": 59,
+      "assigned_class_id_2": 33,
+      "assigned_wing_2": "Girls",
+      "assigned_section_id_2": 66
     },
     {
       "id": 30,
@@ -4229,7 +4235,10 @@
       "show_phone_publicly": 0,
       "assigned_class_id": 27,
       "assigned_wing": "Boys",
-      "assigned_section_id": 53
+      "assigned_section_id": 53,
+      "assigned_class_id_2": null,
+      "assigned_wing_2": "Boys",
+      "assigned_section_id_2": null
     },
     {
       "id": 31,
@@ -4244,11 +4253,14 @@
       "photo_url": null,
       "joining_date": "2026-06-01",
       "is_active": 1,
-      "assigned_classes": "Class 1",
+      "assigned_classes": "Class 1 (Boys)",
       "show_phone_publicly": 0,
       "assigned_class_id": 25,
       "assigned_wing": "Boys",
-      "assigned_section_id": 49
+      "assigned_section_id": 49,
+      "assigned_class_id_2": null,
+      "assigned_wing_2": null,
+      "assigned_section_id_2": null
     },
     {
       "id": 32,
@@ -4267,7 +4279,10 @@
       "show_phone_publicly": 0,
       "assigned_class_id": 26,
       "assigned_wing": "Boys",
-      "assigned_section_id": 51
+      "assigned_section_id": 51,
+      "assigned_class_id_2": null,
+      "assigned_wing_2": "Boys",
+      "assigned_section_id_2": null
     },
     {
       "id": 33,
@@ -4286,7 +4301,10 @@
       "show_phone_publicly": 0,
       "assigned_class_id": 29,
       "assigned_wing": "Boys",
-      "assigned_section_id": 57
+      "assigned_section_id": 57,
+      "assigned_class_id_2": null,
+      "assigned_wing_2": "Boys",
+      "assigned_section_id_2": null
     },
     {
       "id": 34,
@@ -4305,7 +4323,10 @@
       "show_phone_publicly": 0,
       "assigned_class_id": 28,
       "assigned_wing": "Boys",
-      "assigned_section_id": 55
+      "assigned_section_id": 55,
+      "assigned_class_id_2": null,
+      "assigned_wing_2": "Boys",
+      "assigned_section_id_2": null
     }
   ],
   "sections": [
@@ -4433,7 +4454,7 @@
       "class_id": 33,
       "name": "Girls",
       "gender": "Girls",
-      "class_teacher_id": null
+      "class_teacher_id": 29
     },
     {
       "id": 67,
@@ -27144,6 +27165,17 @@
       "marked_by_user_id": 161,
       "created_at": "2026-09-04 19:08:08",
       "updated_at": "2026-09-04 19:08:08"
+    },
+    {
+      "id": 2149,
+      "student_id": 202,
+      "section_id": 59,
+      "date": "2026-09-14",
+      "status": "Present",
+      "remarks": null,
+      "marked_by_user_id": 1,
+      "created_at": "2026-09-18 19:10:07",
+      "updated_at": "2026-09-18 19:17:54"
     }
   ],
   "exams": [
@@ -34724,6 +34756,20 @@
       "status": "Approved",
       "created_at": "2026-09-05 11:07:10",
       "updated_at": "2026-09-05 11:07:10"
+    },
+    {
+      "id": 228,
+      "exam_id": 5,
+      "subject_id": 262,
+      "student_id": 202,
+      "marks_obtained": 88,
+      "grade": "A",
+      "is_pass": 1,
+      "remarks": "Mumtaz",
+      "entered_by_user_id": null,
+      "status": "Approved",
+      "created_at": "2026-09-18 19:17:54",
+      "updated_at": "2026-09-18 19:17:54"
     }
   ],
   "fees": [
@@ -49360,7 +49406,7 @@
       "amount": 100,
       "status": "Paid",
       "paid_amount": 100,
-      "payment_date": "2026-09-05",
+      "payment_date": "2026-09-14",
       "payment_mode": "Cash",
       "payment_reference": null,
       "receipt_no": "REC-2026-0305-4",
@@ -53816,31 +53862,9 @@
       "updated_at": "2026-09-18 18:40:25"
     },
     {
-      "id": 50,
-      "teacher_id": 29,
-      "section_id": 59,
-      "is_class_teacher": 1,
-      "can_manage_attendance": 1,
-      "can_manage_marks": 1,
-      "can_manage_fees": 1,
-      "created_at": "2026-09-18 18:40:25",
-      "updated_at": "2026-09-18 18:40:25"
-    },
-    {
       "id": 51,
       "teacher_id": 30,
       "section_id": 53,
-      "is_class_teacher": 1,
-      "can_manage_attendance": 1,
-      "can_manage_marks": 1,
-      "can_manage_fees": 1,
-      "created_at": "2026-09-18 18:40:25",
-      "updated_at": "2026-09-18 18:40:25"
-    },
-    {
-      "id": 52,
-      "teacher_id": 31,
-      "section_id": 49,
       "is_class_teacher": 1,
       "can_manage_attendance": 1,
       "can_manage_marks": 1,
@@ -53880,6 +53904,39 @@
       "can_manage_fees": 1,
       "created_at": "2026-09-18 18:40:25",
       "updated_at": "2026-09-18 18:40:25"
+    },
+    {
+      "id": 59,
+      "teacher_id": 29,
+      "section_id": 59,
+      "is_class_teacher": 1,
+      "can_manage_attendance": 1,
+      "can_manage_marks": 1,
+      "can_manage_fees": 1,
+      "created_at": "2026-09-18 19:17:54",
+      "updated_at": "2026-09-18 19:17:54"
+    },
+    {
+      "id": 60,
+      "teacher_id": 29,
+      "section_id": 66,
+      "is_class_teacher": 1,
+      "can_manage_attendance": 1,
+      "can_manage_marks": 1,
+      "can_manage_fees": 1,
+      "created_at": "2026-09-18 19:17:54",
+      "updated_at": "2026-09-18 19:17:54"
+    },
+    {
+      "id": 61,
+      "teacher_id": 31,
+      "section_id": 49,
+      "is_class_teacher": 1,
+      "can_manage_attendance": 1,
+      "can_manage_marks": 1,
+      "can_manage_fees": 1,
+      "created_at": "2026-09-18 19:17:54",
+      "updated_at": "2026-09-18 19:17:54"
     }
   ]
 }

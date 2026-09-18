@@ -373,6 +373,9 @@ export async function initDb() {
       assigned_class_id INTEGER,
       assigned_wing TEXT DEFAULT 'Boys',
       assigned_section_id INTEGER,
+      assigned_class_id_2 INTEGER,
+      assigned_wing_2 TEXT DEFAULT 'Boys',
+      assigned_section_id_2 INTEGER,
       is_active INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -693,6 +696,15 @@ export async function initDb() {
   } catch (e) {}
   try {
     await db.execute('ALTER TABLE teachers ADD COLUMN assigned_section_id INTEGER;');
+  } catch (e) {}
+  try {
+    await db.execute('ALTER TABLE teachers ADD COLUMN assigned_class_id_2 INTEGER;');
+  } catch (e) {}
+  try {
+    await db.execute('ALTER TABLE teachers ADD COLUMN assigned_wing_2 TEXT DEFAULT \'Boys\';');
+  } catch (e) {}
+  try {
+    await db.execute('ALTER TABLE teachers ADD COLUMN assigned_section_id_2 INTEGER;');
   } catch (e) {}
 
   // 24. Staff Permissions table

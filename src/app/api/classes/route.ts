@@ -16,63 +16,101 @@ export async function GET(req: NextRequest) {
     const isStaff = user?.role === 'STAFF';
     const isSadr = user?.role === 'SADR' || user?.username === 'sadr' || user?.username === 'jabir.baqavi';
 
-    // If regular STAFF, or Sadr explicitly in staff mode, restrict to assigned class/section
+    // If regular STAFF, or Sadr explicitly in staff mode, restrict to assigned classes/sections (max 2)
     if ((isStaff && !isSadr) || (isSadr && mode === 'staff')) {
       const teacherId = user?.teacher_id;
       const tRes = await db.execute({
         sql: `
-          SELECT t.id, t.full_name, t.assigned_class_id, t.assigned_wing, t.assigned_section_id,
-                 c.name as class_name, s.name as section_name
+          SELECT t.id, t.full_name, 
+                 t.assigned_class_id, t.assigned_wing, t.assigned_section_id,
+                 c1.name as class_name_1, s1.name as section_name_1,
+                 t.assigned_class_id_2, t.assigned_wing_2, t.assigned_section_id_2,
+                 c2.name as class_name_2, s2.name as section_name_2
           FROM teachers t
-          LEFT JOIN classes c ON c.id = t.assigned_class_id
-          LEFT JOIN sections s ON s.id = t.assigned_section_id
+          LEFT JOIN classes c1 ON c1.id = t.assigned_class_id
+          LEFT JOIN sections s1 ON s1.id = t.assigned_section_id
+          LEFT JOIN classes c2 ON c2.id = t.assigned_class_id_2
+          LEFT JOIN sections s2 ON s2.id = t.assigned_section_id_2
           WHERE t.id = ? OR t.user_id = ?
           LIMIT 1
         `,
         args: [teacherId || 0, user?.id || 0]
       });
 
-      if (tRes.rows.length > 0 && tRes.rows[0].assigned_class_id) {
+      if (tRes.rows.length > 0) {
         const tInfo = tRes.rows[0];
-        const classId = Number(tInfo.assigned_class_id);
-        const sectionId = Number(tInfo.assigned_section_id);
+        const assignedList: Array<{ classId: number; className: string; wing: string; sectionId: number }> = [];
+        const classIds: number[] = [];
+        const sectionIds: number[] = [];
 
-        const [classesRes, sectionsRes, subjectsRes] = await Promise.all([
-          db.execute({
-            sql: 'SELECT * FROM classes WHERE id = ?',
-            args: [classId]
-          }),
-          db.execute({
-            sql: `
-              SELECT sec.*, c.name as class_name, t.full_name as teacher_name, t.staff_id,
-                     (SELECT COUNT(*) FROM students WHERE section_id = sec.id AND status = 'Active') as student_count
-              FROM sections sec
-              JOIN classes c ON sec.class_id = c.id
-              LEFT JOIN teachers t ON sec.class_teacher_id = t.id
-              WHERE sec.id = ?
-            `,
-            args: [sectionId]
-          }),
-          db.execute({
-            sql: `
-              SELECT sub.*, c.name as class_name 
-              FROM subjects sub
-              JOIN classes c ON sub.class_id = c.id
-              WHERE sub.class_id = ?
-              ORDER BY sub.name ASC
-            `,
-            args: [classId]
-          })
-        ]);
+        if (tInfo.assigned_class_id && tInfo.assigned_section_id) {
+          const cId = Number(tInfo.assigned_class_id);
+          const sId = Number(tInfo.assigned_section_id);
+          classIds.push(cId);
+          sectionIds.push(sId);
+          assignedList.push({
+            classId: cId,
+            className: String(tInfo.class_name_1 || ''),
+            wing: String(tInfo.assigned_wing || 'Boys'),
+            sectionId: sId
+          });
+        }
 
-        return NextResponse.json({
-          classes: classesRes.rows,
-          sections: sectionsRes.rows,
-          subjects: subjectsRes.rows,
-          isStaff: true,
-          assignedClass: { id: classId, name: tInfo.class_name },
-          assignedSection: { id: sectionId, name: tInfo.section_name, wing: tInfo.assigned_wing }
-        });
+        if (tInfo.assigned_class_id_2 && tInfo.assigned_section_id_2) {
+          const cId2 = Number(tInfo.assigned_class_id_2);
+          const sId2 = Number(tInfo.assigned_section_id_2);
+          if (!classIds.includes(cId2)) classIds.push(cId2);
+          if (!sectionIds.includes(sId2)) sectionIds.push(sId2);
+          assignedList.push({
+            classId: cId2,
+            className: String(tInfo.class_name_2 || ''),
+            wing: String(tInfo.assigned_wing_2 || 'Boys'),
+            sectionId: sId2
+          });
+        }
+
+        if (classIds.length > 0 && sectionIds.length > 0) {
+          const classPlaceholders = classIds.map(() => '?').join(',');
+          const secPlaceholders = sectionIds.map(() => '?').join(',');
+
+          const [classesRes, sectionsRes, subjectsRes] = await Promise.all([
+            db.execute({
+              sql: `SELECT * FROM classes WHERE id IN (${classPlaceholders}) ORDER BY numeric_order ASC`,
+              args: classIds
+            }),
+            db.execute({
+              sql: `
+                SELECT sec.*, c.name as class_name, t.full_name as teacher_name, t.staff_id,
+                       (SELECT COUNT(*) FROM students WHERE section_id = sec.id AND status = 'Active') as student_count
+                FROM sections sec
+                JOIN classes c ON sec.class_id = c.id
+                LEFT JOIN teachers t ON sec.class_teacher_id = t.id
+                WHERE sec.id IN (${secPlaceholders})
+              `,
+              args: sectionIds
+            }),
+            db.execute({
+              sql: `
+                SELECT sub.*, c.name as class_name 
+                FROM subjects sub
+                JOIN classes c ON sub.class_id = c.id
+                WHERE sub.class_id IN (${classPlaceholders})
+                ORDER BY c.numeric_order ASC, sub.name ASC
+              `,
+              args: classIds
+            })
+          ]);
+
+          return NextResponse.json({
+            classes: classesRes.rows,
+            sections: sectionsRes.rows,
+            subjects: subjectsRes.rows,
+            isStaff: true,
+            assignedClassList: assignedList,
+            assignedClass: assignedList[0] ? { id: assignedList[0].classId, name: assignedList[0].className } : null,
+            assignedSection: assignedList[0] ? { id: assignedList[0].sectionId, name: assignedList[0].wing, wing: assignedList[0].wing } : null
+          });
+        }
       }
     }
 

@@ -32,14 +32,39 @@ export async function GET(req: NextRequest) {
     const tId = user.teacher_id || 28;
     const tRes = await db.execute({
       sql: `
-        SELECT t.*, c.name as assigned_class_name, sec.name as assigned_section_name
+        SELECT t.*, 
+               c1.name as assigned_class_name, sec1.name as assigned_section_name,
+               c2.name as assigned_class_name_2, sec2.name as assigned_section_name_2
         FROM teachers t
-        LEFT JOIN classes c ON c.id = t.assigned_class_id
-        LEFT JOIN sections sec ON sec.id = t.assigned_section_id
+        LEFT JOIN classes c1 ON c1.id = t.assigned_class_id
+        LEFT JOIN sections sec1 ON sec1.id = t.assigned_section_id
+        LEFT JOIN classes c2 ON c2.id = t.assigned_class_id_2
+        LEFT JOIN sections sec2 ON sec2.id = t.assigned_section_id_2
         WHERE t.id = ?
       `,
       args: [tId]
     });
+    const teacherData = tRes.rows[0] ? { ...tRes.rows[0] } : null;
+    if (teacherData) {
+      const assignedList = [];
+      if (teacherData.assigned_class_id && teacherData.assigned_section_id) {
+        assignedList.push({
+          classId: Number(teacherData.assigned_class_id),
+          className: String(teacherData.assigned_class_name || ''),
+          wing: String(teacherData.assigned_wing || 'Boys'),
+          sectionId: Number(teacherData.assigned_section_id)
+        });
+      }
+      if (teacherData.assigned_class_id_2 && teacherData.assigned_section_id_2) {
+        assignedList.push({
+          classId: Number(teacherData.assigned_class_id_2),
+          className: String(teacherData.assigned_class_name_2 || ''),
+          wing: String(teacherData.assigned_wing_2 || 'Boys'),
+          sectionId: Number(teacherData.assigned_section_id_2)
+        });
+      }
+      (teacherData as any).assignedClassesList = assignedList;
+    }
     const assignRes = await db.execute({
       sql: `
         SELECT ta.*, c.name as class_name, sec.name as section_name, sub.name as subject_name, sub.code as subject_code
@@ -62,7 +87,7 @@ export async function GET(req: NextRequest) {
       args: [tId]
     });
 
-    details.teacher = tRes.rows[0] || null;
+    details.teacher = teacherData;
     details.assignments = assignRes.rows || [];
     details.classTeacherSections = ctRes.rows || [];
   } else if (user.role === 'PARENT' && user.parent_id) {

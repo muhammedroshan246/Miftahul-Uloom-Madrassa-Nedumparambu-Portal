@@ -201,16 +201,31 @@ export default function TeachersDirectoryPage() {
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...editTeacherModal,
+        assignment1: editTeacherModal.assignment1ClassId ? {
+          classId: Number(editTeacherModal.assignment1ClassId),
+          wing: editTeacherModal.assignment1Wing || 'Boys'
+        } : null,
+        assignment2: editTeacherModal.hasAssignment2 && editTeacherModal.assignment2ClassId ? {
+          classId: Number(editTeacherModal.assignment2ClassId),
+          wing: editTeacherModal.assignment2Wing || 'Girls'
+        } : null
+      };
+
       const res = await fetch('/api/teachers', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editTeacherModal)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setEditTeacherModal(null);
-        setMsg('Teacher record updated successfully!');
+        setMsg('Teacher record and class assignments updated successfully!');
         loadTeachers();
         setTimeout(() => setMsg(''), 3000);
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to update teacher');
       }
     } catch (e) {
       console.error(e);
@@ -383,19 +398,21 @@ export default function TeachersDirectoryPage() {
                       <strong className="font-mono text-slate-900 font-bold">{t.staff_id} • @{t.username}</strong>
                     </div>
                     <div className="flex items-center justify-between text-slate-600">
-                      <span>Assigned Classes:</span>
-                      <strong className="text-emerald-800 font-bold">{t.assigned_classes || 'All Primary & Secondary'}</strong>
+                      <span>Assignment 1:</span>
+                      <strong className="text-emerald-800 font-bold">
+                        {t.assigned_class_name_1 ? `${t.assigned_class_name_1} (${t.assigned_wing_1 || 'Boys'})` : (t.assigned_classes || 'Not Set')}
+                      </strong>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Assignment 2:</span>
+                      <strong className={t.assigned_class_name_2 ? 'text-blue-800 font-bold' : 'text-slate-400 font-medium'}>
+                        {t.assigned_class_name_2 ? `${t.assigned_class_name_2} (${t.assigned_wing_2 || 'Boys'})` : 'None (1 class only)'}
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between text-slate-600">
                       <span>Phone:</span>
                       <span className="font-mono text-slate-700">{t.phone || 'N/A'}</span>
                     </div>
-                    {t.class_teacher_section && (
-                      <div className="flex items-center justify-between text-emerald-800 font-bold pt-1 border-t border-slate-200">
-                        <span>Class Teacher of:</span>
-                        <span>{t.class_teacher_section}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -435,12 +452,17 @@ export default function TeachersDirectoryPage() {
                         qualification: t.qualification || '',
                         designation: t.designation || 'Usthad',
                         assignedClasses: t.assigned_classes || '',
+                        assignment1ClassId: String(t.assigned_class_id || '25'),
+                        assignment1Wing: t.assigned_wing || 'Boys',
+                        hasAssignment2: !!(t.assigned_class_id_2 && t.assigned_section_id_2),
+                        assignment2ClassId: String(t.assigned_class_id_2 || '30'),
+                        assignment2Wing: t.assigned_wing_2 || 'Girls',
                         showPhonePublicly: t.show_phone_publicly === 1,
                         photoUrl: t.photo_url || '',
                         isActive: t.is_active === 1
                       })}
                       className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                      title="Edit Teacher"
+                      title="Edit Teacher & Classroom Assignments"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
@@ -745,15 +767,93 @@ export default function TeachersDirectoryPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Assigned Classes</label>
-                <input
-                  type="text"
-                  value={editTeacherModal.assignedClasses}
-                  onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignedClasses: e.target.value })}
-                  placeholder="e.g. Class 6, Class 9"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-700"
-                />
+              {/* Classroom Assignments (Max 2 classes per teacher) */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <School className="w-4 h-4 text-emerald-800" />
+                    <span className="font-extrabold text-emerald-950 text-xs">Classroom Assignments (Max 2)</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                    {editTeacherModal.hasAssignment2 ? '2 Classes Assigned' : '1 Class Assigned'}
+                  </span>
+                </div>
+
+                {/* Assignment 1 */}
+                <div className="bg-white p-2.5 rounded-xl border border-emerald-100 space-y-1.5">
+                  <label className="block font-bold text-slate-800 text-[11px]">Primary Assignment (Class 1):</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Class</span>
+                      <select
+                        value={editTeacherModal.assignment1ClassId || '25'}
+                        onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment1ClassId: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
+                      >
+                        {CLASSES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Wing / Section</span>
+                      <select
+                        value={editTeacherModal.assignment1Wing || 'Boys'}
+                        onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment1Wing: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
+                      >
+                        <option value="Boys">Boys Wing</option>
+                        <option value="Girls">Girls Wing</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assignment 2 (Optional) */}
+                <div className="bg-white p-2.5 rounded-xl border border-emerald-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-[11px]">
+                      <input
+                        type="checkbox"
+                        checked={editTeacherModal.hasAssignment2 || false}
+                        onChange={(e) => setEditTeacherModal({ ...editTeacherModal, hasAssignment2: e.target.checked })}
+                        className="w-4 h-4 rounded text-emerald-700"
+                      />
+                      <span>Assign Second Class (Optional)</span>
+                    </label>
+                    {editTeacherModal.hasAssignment2 && (
+                      <span className="text-[10px] text-amber-700 font-bold">Class 2 Enabled</span>
+                    )}
+                  </div>
+
+                  {editTeacherModal.hasAssignment2 && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Class</span>
+                        <select
+                          value={editTeacherModal.assignment2ClassId || '30'}
+                          onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment2ClassId: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
+                        >
+                          {CLASSES.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Wing / Section</span>
+                        <select
+                          value={editTeacherModal.assignment2Wing || 'Girls'}
+                          onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment2Wing: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
+                        >
+                          <option value="Boys">Boys Wing</option>
+                          <option value="Girls">Girls Wing</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -356,7 +356,16 @@ export async function POST(req: NextRequest) {
     }
 
     for (const r of records) {
-      if (!r.student_id || !r.status) continue;
+      if (!r.student_id) continue;
+      const recordDate = r.date || date;
+
+      if (r.status === 'Not Marked' || r.status === '—' || r.status === 'Clear' || !r.status) {
+        await db.execute({
+          sql: 'DELETE FROM attendance WHERE student_id = ? AND date = ?',
+          args: [Number(r.student_id), recordDate]
+        });
+        continue;
+      }
 
       await db.execute({
         sql: `
@@ -372,7 +381,7 @@ export async function POST(req: NextRequest) {
         args: [
           Number(r.student_id),
           Number(sectionId),
-          date,
+          recordDate,
           r.status,
           r.remarks || null,
           auth.user.id
