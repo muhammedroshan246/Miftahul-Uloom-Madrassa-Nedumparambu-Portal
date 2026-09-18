@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       
       const sInfoRes = await db.execute({
         sql: `
-          SELECT s.id, s.full_name, s.admission_no, s.roll_no, s.gender,
+          SELECT s.id, s.full_name, s.admission_no, s.roll_no, s.gender, s.section_id,
                  c.name as class_name, sec.name as section_name
           FROM students s
           JOIN classes c ON s.class_id = c.id
@@ -42,6 +42,16 @@ export async function GET(req: NextRequest) {
 
       if (sInfoRes.rows.length === 0) {
         return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+      }
+
+      if (auth.user.role === 'STAFF') {
+        const permCheck = await db.execute({
+          sql: 'SELECT 1 FROM staff_permissions WHERE teacher_id = ? AND section_id = ? AND can_manage_attendance = 1',
+          args: [auth.user.teacher_id, Number(sInfoRes.rows[0].section_id)]
+        });
+        if (permCheck.rows.length === 0) {
+          return NextResponse.json({ error: 'Access denied: You are only authorized to view attendance for your assigned class section' }, { status: 403 });
+        }
       }
       const studentInfo = sInfoRes.rows[0];
 

@@ -107,14 +107,32 @@ export async function GET(req: NextRequest) {
       args.push(q, q, q, q, q);
     }
 
-    // Role check: If staff/teacher, restrict to assigned sections
-    if (auth.user.role === 'STAFF' && auth.user.teacher_id) {
-      query += ` AND s.section_id IN (
-        SELECT section_id FROM teacher_assignments WHERE teacher_id = ?
-        UNION
-        SELECT id FROM sections WHERE class_teacher_id = ?
-      )`;
-      args.push(auth.user.teacher_id, auth.user.teacher_id);
+    // Role check: If staff/teacher, strictly restrict to assigned section
+    if (auth.user.role === 'STAFF') {
+      const teacherId = auth.user.teacher_id;
+      const tRes = await db.execute({
+        sql: 'SELECT assigned_class_id, assigned_section_id FROM teachers WHERE id = ?',
+        args: [teacherId || 0]
+      });
+      const tInfo = tRes.rows[0];
+      const assignedClassId = tInfo?.assigned_class_id ? Number(tInfo.assigned_class_id) : null;
+      const assignedSectionId = tInfo?.assigned_section_id ? Number(tInfo.assigned_section_id) : null;
+
+      if (!assignedSectionId) {
+        return NextResponse.json({ error: 'Access denied: No assigned class section found for this faculty member' }, { status: 403 });
+      }
+
+      // If staff specified a foreign classId or sectionId, return HTTP 403 Forbidden
+      if (classId && classId !== 'All' && Number(classId) !== assignedClassId) {
+        return NextResponse.json({ error: 'Access denied: You are only authorized to view students in your assigned class' }, { status: 403 });
+      }
+      if (sectionId && sectionId !== 'All' && Number(sectionId) !== assignedSectionId) {
+        return NextResponse.json({ error: 'Access denied: You are only authorized to view students in your assigned section' }, { status: 403 });
+      }
+
+      // Lock query strictly to assigned section
+      query += ' AND s.section_id = ?';
+      args.push(assignedSectionId);
     }
 
     query += ' ORDER BY c.numeric_order ASC, s.gender ASC, s.roll_no ASC LIMIT ? OFFSET ?';

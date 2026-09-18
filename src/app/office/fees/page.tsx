@@ -40,7 +40,7 @@ export default function OfficeFeesRegisterPage() {
   const [selectedYear, setSelectedYear] = useState(2026);
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number>(30); // Default Class 6
-  const [selectedWing, setSelectedWing] = useState<'Boys' | 'Girls'>('Boys');
+  const [selectedWing, setSelectedWing] = useState<'Boys' | 'Girls' | 'All'>('Boys');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Paid' | 'Pending' | 'Partially Paid'>('All');
   const [search, setSearch] = useState('');
 
@@ -435,27 +435,37 @@ export default function OfficeFeesRegisterPage() {
             </select>
           </div>
 
-          {/* Wing / Section Selector */}
+          {/* Wing / Section Selector: Boys / Girls / All */}
           <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
             <button
               onClick={() => setSelectedWing('Boys')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
                 selectedWing === 'Boys' 
                   ? 'bg-blue-800 text-white shadow-sm' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Boys Wing
+              Boys
             </button>
             <button
               onClick={() => setSelectedWing('Girls')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
                 selectedWing === 'Girls' 
                   ? 'bg-rose-800 text-white shadow-sm' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Girls Wing
+              Girls
+            </button>
+            <button
+              onClick={() => setSelectedWing('All')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+                selectedWing === 'All' 
+                  ? 'bg-emerald-900 text-white shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              All Wings
             </button>
           </div>
 
@@ -635,6 +645,11 @@ export default function OfficeFeesRegisterPage() {
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
                           <span>{st.admission_no}</span>
+                          {selectedWing === 'All' && (
+                            <span className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${st.gender === 'Boys' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}`}>
+                              {st.gender}
+                            </span>
+                          )}
                           {st.phone && <span className="text-slate-400">• {st.phone}</span>}
                         </div>
                       </td>

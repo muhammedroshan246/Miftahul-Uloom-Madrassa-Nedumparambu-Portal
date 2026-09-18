@@ -65,11 +65,18 @@ export default function StaffDashboardPage() {
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <Link
-            href="/staff/attendance"
+            href="/staff/students"
             className="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-md hover:scale-105 transition-all"
           >
+            <Users className="w-4 h-4" />
+            <span>My Students</span>
+          </Link>
+          <Link
+            href="/staff/attendance"
+            className="px-4 py-2.5 rounded-2xl bg-emerald-800 hover:bg-emerald-700 text-white font-semibold text-xs border border-emerald-600 flex items-center gap-2 transition-all"
+          >
             <CalendarCheck className="w-4 h-4" />
-            <span>Attendance</span>
+            <span>1-Tap Attendance</span>
           </Link>
           <Link
             href="/staff/marks"
@@ -90,39 +97,69 @@ export default function StaffDashboardPage() {
             className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs border border-slate-700 flex items-center gap-2 transition-all"
           >
             <Banknote className="w-4 h-4 text-amber-400" />
-            <span>My Salary (View Only)</span>
+            <span>My Salary</span>
           </Link>
         </div>
       </div>
 
-      {/* Fast 1-Tap Attendance Shortcuts */}
+      {/* Assigned Classroom Desk Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <CalendarCheck className="w-5 h-5 text-emerald-800" />
-            <span>Your Assigned Class Sections</span>
+            <Users className="w-5 h-5 text-emerald-800" />
+            <span>Your Assigned Class Section</span>
           </h2>
-          <span className="text-xs text-slate-400">Class 1 to +2 Dual Wings</span>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+            Locked Classroom Desk
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {assignedSections.map((sec) => (
-            <div key={sec.id} className="p-4 rounded-2xl bg-[#fbfbf8] border border-slate-200 shadow-sm space-y-3">
+            <div key={sec.id} className="p-5 rounded-2xl bg-gradient-to-br from-[#fbfbf8] to-slate-50 border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className={`px-2.5 py-1 rounded text-xs font-bold ${
-                  sec.name === 'Boys' ? 'bg-blue-50 text-blue-800' : 'bg-rose-50 text-rose-800'
-                }`}>
-                  {sec.class_name} ({sec.name})
-                </span>
-                <span className="text-[11px] font-bold text-slate-500">{sec.student_count || 12} Students</span>
+                <div>
+                  <span className={`px-3 py-1 rounded-xl text-xs font-black ${
+                    sec.name === 'Boys' ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {sec.class_name} — {sec.name} Wing
+                  </span>
+                  <div className="text-xs text-slate-500 mt-1">Official Classroom Assignment</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-black text-slate-900">{sec.student_count || 0}</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Enrolled Students</div>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                 <Link
-                  href={`/staff/attendance?sectionId=${sec.id}`}
-                  className="w-full py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs text-center shadow-sm"
+                  href={`/staff/attendance`}
+                  className="py-2.5 px-3 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
-                  1-Tap Mark Attendance →
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>Attendance</span>
+                </Link>
+                <Link
+                  href={`/staff/marks`}
+                  className="py-2.5 px-3 rounded-xl bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Marks Entry</span>
+                </Link>
+                <Link
+                  href={`/staff/fees`}
+                  className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Fees (₹100)</span>
+                </Link>
+                <Link
+                  href={`/staff/students`}
+                  className="py-2.5 px-3 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs text-center shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Student List</span>
                 </Link>
               </div>
             </div>

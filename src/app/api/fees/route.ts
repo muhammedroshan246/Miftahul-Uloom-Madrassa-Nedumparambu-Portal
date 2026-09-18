@@ -99,16 +99,24 @@ export async function GET(req: NextRequest) {
 
     // 5. Query Active Students + Left Join Fees for Selected Month (Excel-Style Register)
     let classId = classIdParam && classIdParam !== 'All' ? Number(classIdParam) : (classes[0] ? Number(classes[0].id) : 25);
-    let gender = genderParam && genderParam !== 'All' ? genderParam.trim() : 'Boys';
+    let gender = genderParam ? genderParam.trim() : 'Boys';
 
     // Role check if staff: ensure class+gender matches allowedSectionIds
     if (auth.user.role === 'STAFF') {
-      const secCheck = await db.execute({
-        sql: 'SELECT id FROM sections WHERE class_id = ? AND name = ? LIMIT 1',
-        args: [classId, gender]
-      });
-      const secId = secCheck.rows[0]?.id ? Number(secCheck.rows[0].id) : null;
-      if (!secId || !allowedSectionIds.includes(secId)) {
+      // If staff specified a classId or gender that does not match their assigned section, return 403 Forbidden
+      if (classIdParam || genderParam) {
+        const secCheck = await db.execute({
+          sql: 'SELECT id FROM sections WHERE class_id = ? AND name = ? LIMIT 1',
+          args: [classId, gender]
+        });
+        const secId = secCheck.rows[0]?.id ? Number(secCheck.rows[0].id) : null;
+        if (!secId || !allowedSectionIds.includes(secId)) {
+          return NextResponse.json({ 
+            error: 'Access denied: You are only authorized to access fees for your assigned class section.' 
+          }, { status: 403 });
+        }
+      } else {
+        // Auto-default to their assigned section
         const firstSec = await db.execute({
           sql: 'SELECT s.id, s.class_id, s.name as gender FROM sections s WHERE s.id = ? LIMIT 1',
           args: [allowedSectionIds[0]]
@@ -120,41 +128,80 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const rosterSql = `
-      SELECT 
-        s.id as student_id,
-        s.roll_no,
-        s.full_name as student_name,
-        s.admission_no,
-        s.gender,
-        s.class_id,
-        s.section_id,
-        c.name as class_name,
-        sec.name as section_name,
-        p.primary_phone,
-        f.id as fee_id,
-        COALESCE(f.month, ?) as month,
-        COALESCE(f.amount, ?) as amount,
-        COALESCE(f.status, 'Pending') as status,
-        COALESCE(f.paid_amount, 0) as paid_amount,
-        (COALESCE(f.amount, ?) - COALESCE(f.paid_amount, 0)) as balance,
-        f.payment_date,
-        f.payment_mode,
-        f.payment_reference,
-        f.receipt_no,
-        f.updated_at
-      FROM students s
-      JOIN classes c ON s.class_id = c.id
-      JOIN sections sec ON s.section_id = sec.id
-      LEFT JOIN parents p ON s.parent_id = p.id
-      LEFT JOIN fees f ON f.student_id = s.id AND f.month = ?
-      WHERE s.class_id = ? AND sec.name = ? AND s.status = 'Active'
-      ORDER BY s.roll_no ASC
-    `;
+    let rosterSql: string;
+    let rosterArgs: any[];
+
+    if (gender === 'All') {
+      rosterSql = `
+        SELECT 
+          s.id as student_id,
+          s.roll_no,
+          s.full_name as student_name,
+          s.admission_no,
+          s.gender,
+          s.class_id,
+          s.section_id,
+          c.name as class_name,
+          sec.name as section_name,
+          p.primary_phone,
+          f.id as fee_id,
+          COALESCE(f.month, ?) as month,
+          COALESCE(f.amount, ?) as amount,
+          COALESCE(f.status, 'Pending') as status,
+          COALESCE(f.paid_amount, 0) as paid_amount,
+          (COALESCE(f.amount, ?) - COALESCE(f.paid_amount, 0)) as balance,
+          f.payment_date,
+          f.payment_mode,
+          f.payment_reference,
+          f.receipt_no,
+          f.updated_at
+        FROM students s
+        JOIN classes c ON s.class_id = c.id
+        JOIN sections sec ON s.section_id = sec.id
+        LEFT JOIN parents p ON s.parent_id = p.id
+        LEFT JOIN fees f ON f.student_id = s.id AND f.month = ?
+        WHERE s.class_id = ? AND s.status = 'Active'
+        ORDER BY s.gender ASC, s.roll_no ASC
+      `;
+      rosterArgs = [targetMonth, standardMonthlyFee, standardMonthlyFee, targetMonth, classId];
+    } else {
+      rosterSql = `
+        SELECT 
+          s.id as student_id,
+          s.roll_no,
+          s.full_name as student_name,
+          s.admission_no,
+          s.gender,
+          s.class_id,
+          s.section_id,
+          c.name as class_name,
+          sec.name as section_name,
+          p.primary_phone,
+          f.id as fee_id,
+          COALESCE(f.month, ?) as month,
+          COALESCE(f.amount, ?) as amount,
+          COALESCE(f.status, 'Pending') as status,
+          COALESCE(f.paid_amount, 0) as paid_amount,
+          (COALESCE(f.amount, ?) - COALESCE(f.paid_amount, 0)) as balance,
+          f.payment_date,
+          f.payment_mode,
+          f.payment_reference,
+          f.receipt_no,
+          f.updated_at
+        FROM students s
+        JOIN classes c ON s.class_id = c.id
+        JOIN sections sec ON s.section_id = sec.id
+        LEFT JOIN parents p ON s.parent_id = p.id
+        LEFT JOIN fees f ON f.student_id = s.id AND f.month = ?
+        WHERE s.class_id = ? AND sec.name = ? AND s.status = 'Active'
+        ORDER BY s.roll_no ASC
+      `;
+      rosterArgs = [targetMonth, standardMonthlyFee, standardMonthlyFee, targetMonth, classId, gender];
+    }
 
     const rosterRes = await db.execute({
       sql: rosterSql,
-      args: [targetMonth, standardMonthlyFee, standardMonthlyFee, targetMonth, classId, gender]
+      args: rosterArgs
     });
 
     let students = rosterRes.rows.map((r: any) => ({
@@ -439,6 +486,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (auth.user.role === 'STAFF') {
+        if (gender.trim() === 'All') {
+          return NextResponse.json({ error: 'Access denied: Staff can only perform bulk actions on their assigned wing' }, { status: 403 });
+        }
         const secCheck = await db.execute({
           sql: 'SELECT id FROM sections WHERE class_id = ? AND name = ? LIMIT 1',
           args: [Number(classId), gender.trim()]
@@ -460,16 +510,26 @@ export async function POST(req: NextRequest) {
       const standardFee = Number(sRes.rows[0]?.value || 100);
 
       // Fetch all active students in class + wing
-      const studentsRes = await db.execute({
-        sql: `
-          SELECT s.id, s.roll_no, s.full_name, s.admission_no 
-          FROM students s
-          JOIN sections sec ON s.section_id = sec.id
-          WHERE s.class_id = ? AND sec.name = ? AND s.status = 'Active'
-          ORDER BY s.roll_no ASC
-        `,
-        args: [Number(classId), gender.trim()]
-      });
+      const studentsRes = gender.trim() === 'All' 
+        ? await db.execute({
+            sql: `
+              SELECT s.id, s.roll_no, s.full_name, s.admission_no 
+              FROM students s
+              WHERE s.class_id = ? AND s.status = 'Active'
+              ORDER BY s.gender ASC, s.roll_no ASC
+            `,
+            args: [Number(classId)]
+          })
+        : await db.execute({
+            sql: `
+              SELECT s.id, s.roll_no, s.full_name, s.admission_no 
+              FROM students s
+              JOIN sections sec ON s.section_id = sec.id
+              WHERE s.class_id = ? AND sec.name = ? AND s.status = 'Active'
+              ORDER BY s.roll_no ASC
+            `,
+            args: [Number(classId), gender.trim()]
+          });
 
       const students = studentsRes.rows;
       if (students.length === 0) {

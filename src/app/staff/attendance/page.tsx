@@ -34,8 +34,9 @@ function AttendanceContent() {
         if (res.ok) {
           const data = await res.json();
           setSections(data.sections || []);
-          if (!selectedSection && data.sections?.length > 0) {
-            setSelectedSection(String(data.sections[0].id));
+          if (data.sections?.length > 0) {
+            const valid = data.sections.some((s: any) => String(s.id) === String(initialSec));
+            setSelectedSection(valid ? initialSec : String(data.sections[0].id));
           }
         }
       } catch (e) {
@@ -179,18 +180,26 @@ function AttendanceContent() {
       <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Assigned Section</label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none bg-white min-w-[180px] focus:ring-2 focus:ring-emerald-600"
-            >
-              {sections.map((sec) => (
-                <option key={sec.id} value={sec.id}>
-                  {sec.class_name} {sec.name} ({sec.student_count || 0} Students)
-                </option>
-              ))}
-            </select>
+            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Assigned Classroom</label>
+            {sections.length <= 1 && sections[0] ? (
+              <div className="px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs font-black flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <span>{sections[0].class_name} — {sections[0].name} Wing</span>
+                <span className="text-[10px] font-semibold text-emerald-700">({students.length} Students)</span>
+              </div>
+            ) : (
+              <select
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none bg-white min-w-[180px] focus:ring-2 focus:ring-emerald-600"
+              >
+                {sections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.class_name} {sec.name} ({sec.student_count || 0} Students)
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>

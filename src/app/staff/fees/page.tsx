@@ -35,23 +35,30 @@ export default function StaffFeesPage() {
   const loadFees = async () => {
     setLoading(true);
     try {
+      const [cRes] = await Promise.all([
+        fetch('/api/classes')
+      ]);
+
+      if (cRes.ok) {
+        const cData = await cRes.json();
+        const secs = cData.sections || [];
+        setAssignedSections(secs);
+        if (secs.length > 0 && !selectedSectionId) {
+          setSelectedSectionId(String(secs[0].id));
+        }
+      }
+
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      if (selectedMonth !== 'All') params.set('month', selectedMonth);
+      if (selectedMonth !== 'All') params.set('month', `${selectedMonth} 2026`);
       if (selectedStatus !== 'All') params.set('status', selectedStatus);
-      if (selectedSectionId) params.set('sectionId', selectedSectionId);
 
       const res = await fetch(`/api/fees?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setFees(data.fees || []);
+        const list = data.students || data.fees || [];
+        setFees(list);
         setMetrics(data.metrics || {});
-        if (data.assignedSections && data.assignedSections.length > 0) {
-          setAssignedSections(data.assignedSections);
-          if (!selectedSectionId) {
-            setSelectedSectionId(data.assignedSections[0].id.toString());
-          }
-        }
       }
     } catch (e) {
       console.error(e);
@@ -71,7 +78,9 @@ export default function StaffFeesPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          feeId: markModal.id,
+          feeId: markModal.fee_id || (markModal.id > 1000 ? null : markModal.id),
+          studentId: markModal.student_id || markModal.id,
+          month: markModal.month,
           status: 'Paid',
           paymentMode: payMode,
           paymentReference: payRef || 'USTHAD-CASH-' + Date.now().toString().slice(-4),
@@ -121,18 +130,25 @@ export default function StaffFeesPage() {
         {/* Section Selector */}
         {assignedSections.length > 0 && (
           <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">My Authorized Section:</div>
-            <select
-              value={selectedSectionId}
-              onChange={(e) => setSelectedSectionId(e.target.value)}
-              className="mt-1 font-black text-slate-900 bg-white px-3 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-800"
-            >
-              {assignedSections.map((sec) => (
-                <option key={sec.id} value={sec.id}>
-                  {sec.class_name} — {sec.wing} Wing
-                </option>
-              ))}
-            </select>
+            <div className="text-[10px] font-bold text-slate-400 uppercase">Assigned Classroom:</div>
+            {assignedSections.length <= 1 ? (
+              <div className="mt-1 font-black text-slate-900 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <span>{assignedSections[0].class_name} — {assignedSections[0].wing || assignedSections[0].name || 'Boys'} Wing</span>
+              </div>
+            ) : (
+              <select
+                value={selectedSectionId}
+                onChange={(e) => setSelectedSectionId(e.target.value)}
+                className="mt-1 font-black text-slate-900 bg-white px-3 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-800"
+              >
+                {assignedSections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.class_name} — {sec.wing || sec.name} Wing
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         )}
       </div>
@@ -233,9 +249,9 @@ export default function StaffFeesPage() {
                 </tr>
               ) : (
                 fees.map((fee) => (
-                  <tr key={fee.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={fee.student_id || fee.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 font-black text-slate-700">
-                      #{fee.roll_number || fee.student_roll || '—'}
+                      #{String(fee.roll_no || fee.roll_number || fee.student_roll || '—').padStart(2, '0')}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {fee.student_name}

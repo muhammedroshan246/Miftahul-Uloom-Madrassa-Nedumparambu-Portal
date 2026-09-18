@@ -31,7 +31,13 @@ export async function GET(req: NextRequest) {
   } else if ((user.role === 'STAFF' || user.role === 'SADR' || user.teacher_id) && (user.teacher_id || user.role === 'SADR' || user.username === 'sadr')) {
     const tId = user.teacher_id || 28;
     const tRes = await db.execute({
-      sql: 'SELECT * FROM teachers WHERE id = ?',
+      sql: `
+        SELECT t.*, c.name as assigned_class_name, sec.name as assigned_section_name
+        FROM teachers t
+        LEFT JOIN classes c ON c.id = t.assigned_class_id
+        LEFT JOIN sections sec ON sec.id = t.assigned_section_id
+        WHERE t.id = ?
+      `,
       args: [tId]
     });
     const assignRes = await db.execute({

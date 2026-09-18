@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const db = getDb();
 
     // Student / Parent View-Only
-    if (auth.user.role === 'STUDENT' || studentId) {
+    if (auth.user.role === 'STUDENT' || (studentId && auth.user.role !== 'STAFF')) {
       const targetId = auth.user.role === 'STUDENT' ? auth.user.student_id : Number(studentId);
       
       const sInfoRes = await db.execute({
@@ -96,20 +96,31 @@ export async function GET(req: NextRequest) {
     }
 
     // Teacher authorization: verify section permission
-    if (auth.user.role === 'STAFF' && sectionId) {
+    let targetSectionId = sectionId;
+    if (auth.user.role === 'STAFF') {
       const teacherId = auth.user.teacher_id;
-      const permCheck = await db.execute({
-        sql: 'SELECT 1 FROM staff_permissions WHERE teacher_id = ? AND section_id = ? AND can_manage_marks = 1',
-        args: [teacherId, Number(sectionId)]
+      const permRes = await db.execute({
+        sql: 'SELECT section_id FROM staff_permissions WHERE teacher_id = ? AND can_manage_marks = 1',
+        args: [teacherId]
       });
-      if (permCheck.rows.length === 0) {
+      const allowedSectionIds = permRes.rows.map((r: any) => Number(r.section_id));
+
+      if (allowedSectionIds.length === 0) {
+        return NextResponse.json({ 
+          error: 'Access denied: You are not authorized to manage marks for any section' 
+        }, { status: 403 });
+      }
+
+      if (!targetSectionId) {
+        targetSectionId = String(allowedSectionIds[0]);
+      } else if (!allowedSectionIds.includes(Number(targetSectionId))) {
         return NextResponse.json({ 
           error: 'Access denied: You are not authorized to manage marks for this class section' 
         }, { status: 403 });
       }
     }
 
-    if (!examId || !sectionId || !subjectId) {
+    if (!examId || !targetSectionId || !subjectId) {
       return NextResponse.json({ error: 'examId, sectionId, and subjectId are required for marks sheet' }, { status: 400 });
     }
 
@@ -137,12 +148,12 @@ export async function GET(req: NextRequest) {
         WHERE s.section_id = ? AND COALESCE(s.status, 'Active') = 'Active'
         ORDER BY s.roll_no ASC
       `,
-      args: [maxMarks, passMarks, Number(examId), Number(subjectId), Number(sectionId)]
+      args: [maxMarks, passMarks, Number(examId), Number(subjectId), Number(targetSectionId)]
     });
 
     return NextResponse.json({
       examId: Number(examId),
-      sectionId: Number(sectionId),
+      sectionId: Number(targetSectionId),
       subjectId: Number(subjectId),
       subjectName: subMeta.name,
       maxMarks,

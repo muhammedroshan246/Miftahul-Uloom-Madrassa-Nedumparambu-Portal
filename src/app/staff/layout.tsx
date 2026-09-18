@@ -18,13 +18,15 @@ import {
   Banknote,
   CreditCard,
   Building2,
-  RefreshCw
+  RefreshCw,
+  Users
 } from 'lucide-react';
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [teacher, setTeacher] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
 
@@ -63,6 +65,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         }
         if (isMounted) {
           setUser(data.user);
+          setTeacher(data.teacher || data.details?.teacher || null);
           setLoading(false);
         }
       } catch (err) {
@@ -156,8 +159,13 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           )}
 
           <div className="hidden sm:flex items-center gap-2 text-xs">
-            <span className="text-emerald-200">Assigned:</span>
+            <span className="text-emerald-200">Faculty:</span>
             <span className="font-bold text-amber-300">{user?.full_name || 'Usthad'}</span>
+            {teacher?.assigned_class_name && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-800 text-amber-300 text-[10px] font-bold border border-emerald-700">
+                {teacher.assigned_class_name} ({teacher.assigned_wing || 'Boys'})
+              </span>
+            )}
           </div>
 
           <button
@@ -175,6 +183,10 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         <Link href="/staff" className={`hover:text-emerald-800 flex items-center gap-1.5 shrink-0 ${pathname === '/staff' ? 'text-emerald-900 font-bold border-b-2 border-emerald-800 pb-1' : 'text-slate-600'}`}>
           <Home className="w-4 h-4 text-amber-600" />
           <span>Dashboard</span>
+        </Link>
+        <Link href="/staff/students" className={`hover:text-emerald-800 flex items-center gap-1.5 shrink-0 ${pathname === '/staff/students' ? 'text-emerald-900 font-bold border-b-2 border-emerald-800 pb-1' : 'text-slate-600'}`}>
+          <Users className="w-4 h-4 text-purple-700" />
+          <span>My Class Students</span>
         </Link>
         <Link href="/staff/attendance" className={`hover:text-emerald-800 flex items-center gap-1.5 shrink-0 ${pathname === '/staff/attendance' ? 'text-emerald-900 font-bold border-b-2 border-emerald-800 pb-1' : 'text-slate-600'}`}>
           <CalendarCheck className="w-4 h-4 text-emerald-700" />
@@ -209,6 +221,10 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           <Home className="w-4 h-4" />
           <span>Home</span>
         </Link>
+        <Link href="/staff/students" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${pathname === '/staff/students' ? 'text-emerald-800' : 'text-slate-400'}`}>
+          <Users className="w-4 h-4" />
+          <span>Students</span>
+        </Link>
         <Link href="/staff/attendance" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${pathname === '/staff/attendance' ? 'text-emerald-800' : 'text-slate-400'}`}>
           <CalendarCheck className="w-4 h-4" />
           <span>Attendance</span>
@@ -224,10 +240,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         <Link href="/staff/salary" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${pathname === '/staff/salary' ? 'text-emerald-800' : 'text-slate-400'}`}>
           <Banknote className="w-4 h-4" />
           <span>Salary</span>
-        </Link>
-        <Link href="/staff/profile" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${pathname === '/staff/profile' ? 'text-emerald-800' : 'text-slate-400'}`}>
-          <User className="w-4 h-4" />
-          <span>Profile</span>
         </Link>
       </div>
 

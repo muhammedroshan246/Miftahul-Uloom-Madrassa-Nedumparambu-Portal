@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { FileSpreadsheet, Save, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -169,16 +169,23 @@ export default function StaffMarksPage() {
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Class Wing</label>
-          <select
-            value={selectedSection}
-            onChange={(e) => setSelectedSection(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 outline-none bg-white min-w-[150px]"
-          >
-            {sections.map((sec) => (
-              <option key={sec.id} value={sec.id}>{sec.class_name} {sec.name}</option>
-            ))}
-          </select>
+          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Assigned Classroom</label>
+          {sections.length <= 1 && sections[0] ? (
+            <div className="px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-black flex items-center gap-1.5 min-w-[150px]">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              <span>{sections[0].class_name} — {sections[0].name}</span>
+            </div>
+          ) : (
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 outline-none bg-white min-w-[150px]"
+            >
+              {sections.map((sec) => (
+                <option key={sec.id} value={sec.id}>{sec.class_name} {sec.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div>

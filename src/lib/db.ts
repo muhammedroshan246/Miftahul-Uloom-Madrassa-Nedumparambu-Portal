@@ -370,6 +370,9 @@ export async function initDb() {
       designation TEXT DEFAULT 'Teacher',
       photo_url TEXT,
       joining_date DATE,
+      assigned_class_id INTEGER,
+      assigned_wing TEXT DEFAULT 'Boys',
+      assigned_section_id INTEGER,
       is_active INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -681,9 +684,16 @@ export async function initDb() {
   // Safe migrations for newly added columns
   try {
     await db.execute('ALTER TABLE salaries ADD COLUMN other_adjustment REAL DEFAULT 0;');
-  } catch (e) {
-    // Column already exists
-  }
+  } catch (e) {}
+  try {
+    await db.execute('ALTER TABLE teachers ADD COLUMN assigned_class_id INTEGER;');
+  } catch (e) {}
+  try {
+    await db.execute('ALTER TABLE teachers ADD COLUMN assigned_wing TEXT DEFAULT \'Boys\';');
+  } catch (e) {}
+  try {
+    await db.execute('ALTER TABLE teachers ADD COLUMN assigned_section_id INTEGER;');
+  } catch (e) {}
 
   // 24. Staff Permissions table
   await db.execute(`
@@ -693,11 +703,47 @@ export async function initDb() {
       section_id INTEGER NOT NULL,
       can_manage_marks INTEGER DEFAULT 1,
       can_manage_attendance INTEGER DEFAULT 1,
+      can_manage_fees INTEGER DEFAULT 1,
       FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
       FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE,
       UNIQUE(teacher_id, section_id)
     );
   `);
+  try {
+    await db.execute('ALTER TABLE staff_permissions ADD COLUMN can_manage_fees INTEGER DEFAULT 1;');
+  } catch (e) {}
+
+  // Synchronize 7 Faculty Class Assignments if not yet set
+  try {
+    const unassignedCheck = await db.execute('SELECT count(*) as c FROM teachers WHERE assigned_section_id IS NOT NULL');
+    if (Number(unassignedCheck.rows[0]?.c || 0) < 7) {
+      const assignments = [
+        { id: 28, class_id: 36, wing: 'Boys', section_id: 71 }, // +2 Boys
+        { id: 29, class_id: 30, wing: 'Boys', section_id: 59 }, // Class 6 Boys
+        { id: 30, class_id: 27, wing: 'Boys', section_id: 53 }, // Class 3 Boys
+        { id: 31, class_id: 25, wing: 'Boys', section_id: 49 }, // Class 1 Boys
+        { id: 32, class_id: 26, wing: 'Boys', section_id: 51 }, // Class 2 Boys
+        { id: 33, class_id: 29, wing: 'Boys', section_id: 57 }, // Class 5 Boys
+        { id: 34, class_id: 28, wing: 'Boys', section_id: 55 }, // Class 4 Boys
+      ];
+      for (const a of assignments) {
+        await db.execute({
+          sql: 'UPDATE teachers SET assigned_class_id = ?, assigned_wing = ?, assigned_section_id = ? WHERE id = ?',
+          args: [a.class_id, a.wing, a.section_id, a.id]
+        });
+        await db.execute({
+          sql: 'UPDATE sections SET class_teacher_id = ? WHERE id = ?',
+          args: [a.id, a.section_id]
+        });
+        await db.execute({
+          sql: 'INSERT INTO staff_permissions (teacher_id, section_id, can_manage_marks, can_manage_attendance, can_manage_fees) VALUES (?, ?, 1, 1, 1) ON CONFLICT(teacher_id, section_id) DO UPDATE SET can_manage_marks = 1, can_manage_attendance = 1, can_manage_fees = 1',
+          args: [a.id, a.section_id]
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[DB] Notice syncing faculty assignments:', e);
+  }
 
   // Indexes
   await db.execute('CREATE INDEX IF NOT EXISTS idx_students_class_section ON students(class_id, section_id);');
