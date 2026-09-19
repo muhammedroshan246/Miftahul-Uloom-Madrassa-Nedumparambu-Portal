@@ -107,55 +107,56 @@ export async function GET(req: NextRequest) {
       args.push(q, q, q, q, q);
     }
 
-    // Role check: If staff/teacher, strictly restrict to assigned sections (max 2)
+    // Role check: If staff/teacher, strictly restrict to assigned classes (max 2)
     if (auth.user.role === 'STAFF') {
       const teacherId = auth.user.teacher_id;
       const tRes = await db.execute({
-        sql: 'SELECT assigned_class_id, assigned_section_id, assigned_class_id_2, assigned_section_id_2 FROM teachers WHERE id = ?',
-        args: [teacherId || 0]
+        sql: 'SELECT assigned_class_id, assigned_class_id_2 FROM teachers WHERE id = ? OR user_id = ?',
+        args: [teacherId || 0, auth.user.id || 0]
       });
       const tInfo = tRes.rows[0];
       const allowedClassIds: number[] = [];
-      const allowedSectionIds: number[] = [];
 
-      if (tInfo?.assigned_class_id && tInfo?.assigned_section_id) {
+      if (tInfo?.assigned_class_id) {
         allowedClassIds.push(Number(tInfo.assigned_class_id));
-        allowedSectionIds.push(Number(tInfo.assigned_section_id));
       }
-      if (tInfo?.assigned_class_id_2 && tInfo?.assigned_section_id_2) {
+      if (tInfo?.assigned_class_id_2) {
         const cId2 = Number(tInfo.assigned_class_id_2);
-        const sId2 = Number(tInfo.assigned_section_id_2);
         if (!allowedClassIds.includes(cId2)) allowedClassIds.push(cId2);
-        if (!allowedSectionIds.includes(sId2)) allowedSectionIds.push(sId2);
       }
 
-      if (allowedSectionIds.length === 0) {
-        return NextResponse.json({ error: 'Access denied: No assigned class section found for this faculty member' }, { status: 403 });
+      if (allowedClassIds.length === 0) {
+        return NextResponse.json({ error: 'Access denied: No assigned class found for this faculty member' }, { status: 403 });
       }
 
-      // If staff specified a foreign classId or sectionId, return HTTP 403 Forbidden
+      // If staff specified a foreign classId, return HTTP 403 Forbidden
       if (classId && classId !== 'All') {
         if (!allowedClassIds.includes(Number(classId))) {
           return NextResponse.json({ error: 'Access denied: You are only authorized to view students in your assigned class' }, { status: 403 });
         }
       }
+
+      // If staff specified a sectionId, verify that section belongs to an authorized class
       if (sectionId && sectionId !== 'All') {
-        if (!allowedSectionIds.includes(Number(sectionId))) {
-          return NextResponse.json({ error: 'Access denied: You are only authorized to view students in your assigned section' }, { status: 403 });
+        const secCheck = await db.execute({
+          sql: 'SELECT class_id FROM sections WHERE id = ?',
+          args: [Number(sectionId)]
+        });
+        if (secCheck.rows.length === 0 || !allowedClassIds.includes(Number(secCheck.rows[0].class_id))) {
+          return NextResponse.json({ error: 'Access denied: You are only authorized to view students in your assigned class sections' }, { status: 403 });
         }
       }
 
-      // Lock query to permitted sections
+      // Lock query to permitted classes
       if (sectionId && sectionId !== 'All') {
         query += ' AND s.section_id = ?';
         args.push(Number(sectionId));
       } else if (classId && classId !== 'All') {
-        const classSecs = allowedSectionIds; // already verified
-        query += ' AND s.class_id = ? AND s.section_id IN (' + classSecs.map(() => '?').join(',') + ')';
-        args.push(Number(classId), ...classSecs);
+        query += ' AND s.class_id = ?';
+        args.push(Number(classId));
       } else {
-        query += ' AND s.section_id IN (' + allowedSectionIds.map(() => '?').join(',') + ')';
-        args.push(...allowedSectionIds);
+        query += ' AND s.class_id IN (' + allowedClassIds.map(() => '?').join(',') + ')';
+        args.push(...allowedClassIds);
       }
     }
 

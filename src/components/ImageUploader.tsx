@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef } from 'react';
 import { 
@@ -14,9 +14,11 @@ import {
 } from 'lucide-react';
 
 interface ImageUploaderProps {
-  category: 'branding' | 'hero' | 'principal' | 'gallery' | 'events' | 'teachers' | 'students' | 'achievements';
+  category: 'branding' | 'hero' | 'principal' | 'gallery' | 'events' | 'teachers' | 'students' | 'achievements' | 'student-photo';
   value?: string;
-  onChange: (url: string) => void;
+  currentImage?: string;
+  onChange?: (url: string) => void;
+  onImageUploaded?: (url: string) => void;
   onUploadComplete?: (data: any) => void;
   label?: string;
   helperText?: string;
@@ -28,8 +30,10 @@ interface ImageUploaderProps {
 
 export default function ImageUploader({
   category,
-  value = '',
+  value,
+  currentImage,
   onChange,
+  onImageUploaded,
   onUploadComplete,
   label = 'Upload Image',
   helperText = 'JPG, PNG, or WebP up to 5MB (Auto-optimized)',
@@ -38,17 +42,24 @@ export default function ImageUploader({
   maxSizeMB = 5,
   className = ''
 }: ImageUploaderProps) {
+  const activeValue = value !== undefined ? value : (currentImage || '');
+  const triggerChange = (url: string) => {
+    if (onChange) onChange(url);
+    if (onImageUploaded) onImageUploaded(url);
+  };
+  const normalizedCategory = (category === 'student-photo' ? 'students' : category) as 'branding' | 'hero' | 'principal' | 'gallery' | 'events' | 'teachers' | 'students' | 'achievements';
+
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [previewUrl, setPreviewUrl] = useState(value);
+  const [previewUrl, setPreviewUrl] = useState(activeValue);
   const [showModal, setShowModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update preview if value changes externally
   React.useEffect(() => {
-    setPreviewUrl(value);
-  }, [value]);
+    setPreviewUrl(activeValue);
+  }, [activeValue]);
 
   // Client-Side Canvas Image Optimization / Compression
   const compressImage = async (file: File): Promise<Blob> => {
@@ -123,7 +134,7 @@ export default function ImageUploader({
 
       const formData = new FormData();
       formData.append('file', optimizedBlob, file.name);
-      formData.append('category', category);
+      formData.append('category', normalizedCategory);
       if (studentId) formData.append('studentId', String(studentId));
 
       const res = await fetch('/api/media/upload', {
@@ -135,11 +146,11 @@ export default function ImageUploader({
       if (!res.ok) throw new Error(data.error || 'Upload failed');
 
       setPreviewUrl(data.url);
-      onChange(data.url);
+      triggerChange(data.url);
       if (onUploadComplete) onUploadComplete(data);
     } catch (err: any) {
       setError(err.message || 'Image upload failed. Please try again.');
-      setPreviewUrl(value); // Revert
+      setPreviewUrl(activeValue); // Revert
     } finally {
       setUploading(false);
     }
@@ -174,7 +185,7 @@ export default function ImageUploader({
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     setPreviewUrl('');
-    onChange('');
+    triggerChange('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 

@@ -130,12 +130,14 @@ export async function GET(req: NextRequest) {
       // Fetch teacher's permitted sections for attendance
       const permRes = await db.execute({
         sql: `
-          SELECT section_id FROM staff_permissions 
-          WHERE teacher_id = ? AND can_manage_attendance = 1
+          SELECT sp.section_id, s.class_id FROM staff_permissions sp
+          JOIN sections s ON sp.section_id = s.id
+          WHERE sp.teacher_id = ? AND sp.can_manage_attendance = 1
         `,
         args: [teacherId]
       });
       const allowedSectionIds = permRes.rows.map((r: any) => Number(r.section_id));
+      const allowedClassIds = Array.from(new Set(permRes.rows.map((r: any) => Number(r.class_id))));
 
       if (allowedSectionIds.length === 0) {
         return NextResponse.json({ 
@@ -145,9 +147,21 @@ export async function GET(req: NextRequest) {
         }, { status: 403 });
       }
 
-      // If no sectionId specified, default to first authorized section
+      // If staff specified a foreign classId, return HTTP 403 Forbidden
+      if (classId && classId !== 'All' && !allowedClassIds.includes(Number(classId))) {
+        return NextResponse.json({ 
+          error: 'Access denied: You are only authorized to manage attendance for your assigned class' 
+        }, { status: 403 });
+      }
+
+      // If no sectionId specified, default to first authorized section for the requested class
       if (!sectionId) {
-        sectionId = String(allowedSectionIds[0]);
+        if (classId && classId !== 'All') {
+          const matchSec = permRes.rows.find((r: any) => Number(r.class_id) === Number(classId));
+          sectionId = matchSec ? String(matchSec.section_id) : String(allowedSectionIds[0]);
+        } else {
+          sectionId = String(allowedSectionIds[0]);
+        }
       } else if (!allowedSectionIds.includes(Number(sectionId))) {
         return NextResponse.json({ 
           error: 'Access denied: You are only authorized to manage attendance for your assigned class section' 
@@ -207,7 +221,7 @@ export async function GET(req: NextRequest) {
       `,
       args: [Number(sectionId)]
     });
-    const meta = secMeta.rows[0] || {};
+    const meta: any = secMeta.rows[0] || {};
 
     // Monthly View
     if (view === 'monthly') {

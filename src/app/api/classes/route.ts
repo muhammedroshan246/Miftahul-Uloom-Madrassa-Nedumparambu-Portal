@@ -22,15 +22,11 @@ export async function GET(req: NextRequest) {
       const tRes = await db.execute({
         sql: `
           SELECT t.id, t.full_name, 
-                 t.assigned_class_id, t.assigned_wing, t.assigned_section_id,
-                 c1.name as class_name_1, s1.name as section_name_1,
-                 t.assigned_class_id_2, t.assigned_wing_2, t.assigned_section_id_2,
-                 c2.name as class_name_2, s2.name as section_name_2
+                 t.assigned_class_id, c1.name as class_name_1,
+                 t.assigned_class_id_2, c2.name as class_name_2
           FROM teachers t
           LEFT JOIN classes c1 ON c1.id = t.assigned_class_id
-          LEFT JOIN sections s1 ON s1.id = t.assigned_section_id
           LEFT JOIN classes c2 ON c2.id = t.assigned_class_id_2
-          LEFT JOIN sections s2 ON s2.id = t.assigned_section_id_2
           WHERE t.id = ? OR t.user_id = ?
           LIMIT 1
         `,
@@ -39,39 +35,17 @@ export async function GET(req: NextRequest) {
 
       if (tRes.rows.length > 0) {
         const tInfo = tRes.rows[0];
-        const assignedList: Array<{ classId: number; className: string; wing: string; sectionId: number }> = [];
         const classIds: number[] = [];
-        const sectionIds: number[] = [];
 
-        if (tInfo.assigned_class_id && tInfo.assigned_section_id) {
-          const cId = Number(tInfo.assigned_class_id);
-          const sId = Number(tInfo.assigned_section_id);
-          classIds.push(cId);
-          sectionIds.push(sId);
-          assignedList.push({
-            classId: cId,
-            className: String(tInfo.class_name_1 || ''),
-            wing: String(tInfo.assigned_wing || 'Boys'),
-            sectionId: sId
-          });
+        if (tInfo.assigned_class_id) {
+          classIds.push(Number(tInfo.assigned_class_id));
+        }
+        if (tInfo.assigned_class_id_2 && !classIds.includes(Number(tInfo.assigned_class_id_2))) {
+          classIds.push(Number(tInfo.assigned_class_id_2));
         }
 
-        if (tInfo.assigned_class_id_2 && tInfo.assigned_section_id_2) {
-          const cId2 = Number(tInfo.assigned_class_id_2);
-          const sId2 = Number(tInfo.assigned_section_id_2);
-          if (!classIds.includes(cId2)) classIds.push(cId2);
-          if (!sectionIds.includes(sId2)) sectionIds.push(sId2);
-          assignedList.push({
-            classId: cId2,
-            className: String(tInfo.class_name_2 || ''),
-            wing: String(tInfo.assigned_wing_2 || 'Boys'),
-            sectionId: sId2
-          });
-        }
-
-        if (classIds.length > 0 && sectionIds.length > 0) {
+        if (classIds.length > 0) {
           const classPlaceholders = classIds.map(() => '?').join(',');
-          const secPlaceholders = sectionIds.map(() => '?').join(',');
 
           const [classesRes, sectionsRes, subjectsRes] = await Promise.all([
             db.execute({
@@ -85,9 +59,10 @@ export async function GET(req: NextRequest) {
                 FROM sections sec
                 JOIN classes c ON sec.class_id = c.id
                 LEFT JOIN teachers t ON sec.class_teacher_id = t.id
-                WHERE sec.id IN (${secPlaceholders})
+                WHERE sec.class_id IN (${classPlaceholders})
+                ORDER BY c.numeric_order ASC, sec.name ASC
               `,
-              args: sectionIds
+              args: classIds
             }),
             db.execute({
               sql: `
@@ -101,14 +76,18 @@ export async function GET(req: NextRequest) {
             })
           ]);
 
+          const assignedList = classesRes.rows.map((c: any) => ({
+            classId: Number(c.id),
+            className: String(c.name)
+          }));
+
           return NextResponse.json({
             classes: classesRes.rows,
             sections: sectionsRes.rows,
             subjects: subjectsRes.rows,
             isStaff: true,
             assignedClassList: assignedList,
-            assignedClass: assignedList[0] ? { id: assignedList[0].classId, name: assignedList[0].className } : null,
-            assignedSection: assignedList[0] ? { id: assignedList[0].sectionId, name: assignedList[0].wing, wing: assignedList[0].wing } : null
+            assignedClass: assignedList[0] || null
           });
         }
       }

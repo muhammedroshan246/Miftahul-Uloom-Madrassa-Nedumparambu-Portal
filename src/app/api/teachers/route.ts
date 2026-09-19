@@ -326,69 +326,64 @@ export async function PUT(req: NextRequest) {
     });
 
     // 2. Class Assignments Update (Max 2 classes per teacher)
-    const { assignment1, assignment2 } = data;
-    if (assignment1 !== undefined) {
-      let sec1Id: number | null = null;
+    const { assignment1, assignment2, class1Id: directClass1Id, class2Id: directClass2Id } = data;
+    if (assignment1 !== undefined || directClass1Id !== undefined || directClass2Id !== undefined) {
       let class1Id: number | null = null;
-      let wing1: string | null = null;
-
-      if (assignment1 && assignment1.classId && assignment1.wing) {
-        const secRes1 = await db.execute({
-          sql: 'SELECT id, name FROM sections WHERE class_id = ? AND (LOWER(name) = LOWER(?) OR LOWER(gender) = LOWER(?)) LIMIT 1',
-          args: [Number(assignment1.classId), assignment1.wing, assignment1.wing]
-        });
-        if (secRes1.rows.length > 0) {
-          sec1Id = Number(secRes1.rows[0].id);
-          class1Id = Number(assignment1.classId);
-          wing1 = String(secRes1.rows[0].name);
-        }
+      if (directClass1Id !== undefined) {
+        class1Id = directClass1Id && directClass1Id !== 'None' ? Number(directClass1Id) : null;
+      } else if (assignment1 && assignment1.classId) {
+        class1Id = Number(assignment1.classId);
       }
 
-      let sec2Id: number | null = null;
       let class2Id: number | null = null;
-      let wing2: string | null = null;
-
-      if (assignment2 && assignment2.classId && assignment2.wing) {
-        const secRes2 = await db.execute({
-          sql: 'SELECT id, name FROM sections WHERE class_id = ? AND (LOWER(name) = LOWER(?) OR LOWER(gender) = LOWER(?)) LIMIT 1',
-          args: [Number(assignment2.classId), assignment2.wing, assignment2.wing]
-        });
-        if (secRes2.rows.length > 0) {
-          sec2Id = Number(secRes2.rows[0].id);
-          class2Id = Number(assignment2.classId);
-          wing2 = String(secRes2.rows[0].name);
-        }
+      if (directClass2Id !== undefined) {
+        class2Id = directClass2Id && directClass2Id !== 'None' ? Number(directClass2Id) : null;
+      } else if (assignment2 && assignment2.classId) {
+        class2Id = Number(assignment2.classId);
       }
 
-      // Fetch class names for human display text
+      if (class1Id && class2Id && class1Id === class2Id) {
+        class2Id = null;
+      }
+
+      // Fetch class names for display text
       let displayAssignedClasses = '';
       if (class1Id) {
         const c1 = await db.execute({ sql: 'SELECT name FROM classes WHERE id = ?', args: [class1Id] });
-        displayAssignedClasses += `${c1.rows[0]?.name || 'Class'} (${wing1 || 'Boys'})`;
+        displayAssignedClasses += c1.rows[0]?.name || `Class ${class1Id}`;
       }
       if (class2Id) {
         const c2 = await db.execute({ sql: 'SELECT name FROM classes WHERE id = ?', args: [class2Id] });
         if (displayAssignedClasses) displayAssignedClasses += ', ';
-        displayAssignedClasses += `${c2.rows[0]?.name || 'Class'} (${wing2 || 'Boys'})`;
+        displayAssignedClasses += c2.rows[0]?.name || `Class ${class2Id}`;
       }
 
       await db.execute({
         sql: `
           UPDATE teachers
-          SET assigned_class_id = ?, assigned_wing = ?, assigned_section_id = ?,
-              assigned_class_id_2 = ?, assigned_wing_2 = ?, assigned_section_id_2 = ?,
+          SET assigned_class_id = ?, assigned_class_id_2 = ?,
               assigned_classes = COALESCE(NULLIF(?, ''), assigned_classes)
           WHERE id = ?
         `,
-        args: [class1Id, wing1, sec1Id, class2Id, wing2, sec2Id, displayAssignedClasses, Number(id)]
+        args: [class1Id, class2Id, displayAssignedClasses, Number(id)]
       });
 
-      // Synchronize staff_permissions: strictly 1 or 2 sections
+      // Synchronize staff_permissions: all sections of assigned classes
       await db.execute({ sql: 'DELETE FROM staff_permissions WHERE teacher_id = ?', args: [Number(id)] });
 
+      const assignedClassIds = [class1Id, class2Id].filter(Boolean) as number[];
       const newSecs: number[] = [];
-      if (sec1Id) newSecs.push(sec1Id);
-      if (sec2Id && sec2Id !== sec1Id) newSecs.push(sec2Id);
+
+      if (assignedClassIds.length > 0) {
+        const cPlaceholders = assignedClassIds.map(() => '?').join(',');
+        const secRes = await db.execute({
+          sql: `SELECT id FROM sections WHERE class_id IN (${cPlaceholders})`,
+          args: assignedClassIds
+        });
+        for (const r of secRes.rows) {
+          newSecs.push(Number(r.id));
+        }
+      }
 
       for (const sId of newSecs) {
         await db.execute({

@@ -17,6 +17,21 @@ export const ROLES = {
 export type Role = typeof ROLES[keyof typeof ROLES];
 
 export const CLASSES = [
+  { id: 25, name: "Class 1" },
+  { id: 26, name: "Class 2" },
+  { id: 27, name: "Class 3" },
+  { id: 28, name: "Class 4" },
+  { id: 29, name: "Class 5" },
+  { id: 30, name: "Class 6" },
+  { id: 31, name: "Class 7" },
+  { id: 32, name: "Class 8" },
+  { id: 33, name: "Class 9" },
+  { id: 34, name: "Class 10" },
+  { id: 35, name: "+1" },
+  { id: 36, name: "+2" },
+];
+
+export const CLASS_NAMES = [
   "Class 1",
   "Class 2",
   "Class 3",

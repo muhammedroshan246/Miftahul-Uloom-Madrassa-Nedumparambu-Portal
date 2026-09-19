@@ -60,7 +60,7 @@ export default function TeachersDirectoryPage() {
 
   // Class Teacher Assignment Form
   const [assignData, setAssignData] = useState({
-    classId: '8',
+    classId: '25',
     gender: 'Boys',
     teacherId: ''
   });
@@ -203,14 +203,8 @@ export default function TeachersDirectoryPage() {
     try {
       const payload = {
         ...editTeacherModal,
-        assignment1: editTeacherModal.assignment1ClassId ? {
-          classId: Number(editTeacherModal.assignment1ClassId),
-          wing: editTeacherModal.assignment1Wing || 'Boys'
-        } : null,
-        assignment2: editTeacherModal.hasAssignment2 && editTeacherModal.assignment2ClassId ? {
-          classId: Number(editTeacherModal.assignment2ClassId),
-          wing: editTeacherModal.assignment2Wing || 'Girls'
-        } : null
+        class1Id: editTeacherModal.class1Id ? Number(editTeacherModal.class1Id) : null,
+        class2Id: editTeacherModal.class2Id && editTeacherModal.class2Id !== 'None' ? Number(editTeacherModal.class2Id) : null
       };
 
       const res = await fetch('/api/teachers', {
@@ -398,15 +392,15 @@ export default function TeachersDirectoryPage() {
                       <strong className="font-mono text-slate-900 font-bold">{t.staff_id} • @{t.username}</strong>
                     </div>
                     <div className="flex items-center justify-between text-slate-600">
-                      <span>Assignment 1:</span>
+                      <span>Assigned Class 1:</span>
                       <strong className="text-emerald-800 font-bold">
-                        {t.assigned_class_name_1 ? `${t.assigned_class_name_1} (${t.assigned_wing_1 || 'Boys'})` : (t.assigned_classes || 'Not Set')}
+                        {t.assigned_class_name_1 || 'Not Set'}
                       </strong>
                     </div>
                     <div className="flex items-center justify-between text-slate-600">
-                      <span>Assignment 2:</span>
+                      <span>Assigned Class 2:</span>
                       <strong className={t.assigned_class_name_2 ? 'text-blue-800 font-bold' : 'text-slate-400 font-medium'}>
-                        {t.assigned_class_name_2 ? `${t.assigned_class_name_2} (${t.assigned_wing_2 || 'Boys'})` : 'None (1 class only)'}
+                        {t.assigned_class_name_2 || 'None'}
                       </strong>
                     </div>
                     <div className="flex items-center justify-between text-slate-600">
@@ -452,11 +446,8 @@ export default function TeachersDirectoryPage() {
                         qualification: t.qualification || '',
                         designation: t.designation || 'Usthad',
                         assignedClasses: t.assigned_classes || '',
-                        assignment1ClassId: String(t.assigned_class_id || '25'),
-                        assignment1Wing: t.assigned_wing || 'Boys',
-                        hasAssignment2: !!(t.assigned_class_id_2 && t.assigned_section_id_2),
-                        assignment2ClassId: String(t.assigned_class_id_2 || '30'),
-                        assignment2Wing: t.assigned_wing_2 || 'Girls',
+                        class1Id: String(t.assigned_class_id || '25'),
+                        class2Id: t.assigned_class_id_2 ? String(t.assigned_class_id_2) : '',
                         showPhonePublicly: t.show_phone_publicly === 1,
                         photoUrl: t.photo_url || '',
                         isActive: t.is_active === 1
@@ -779,80 +770,37 @@ export default function TeachersDirectoryPage() {
                   </span>
                 </div>
 
-                {/* Assignment 1 */}
-                <div className="bg-white p-2.5 rounded-xl border border-emerald-100 space-y-1.5">
-                  <label className="block font-bold text-slate-800 text-[11px]">Primary Assignment (Class 1):</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Class</span>
-                      <select
-                        value={editTeacherModal.assignment1ClassId || '25'}
-                        onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment1ClassId: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
-                      >
-                        {CLASSES.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Wing / Section</span>
-                      <select
-                        value={editTeacherModal.assignment1Wing || 'Boys'}
-                        onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment1Wing: e.target.value })}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
-                      >
-                        <option value="Boys">Boys Wing</option>
-                        <option value="Girls">Girls Wing</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Assignment 2 (Optional) */}
-                <div className="bg-white p-2.5 rounded-xl border border-emerald-100 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-[11px]">
-                      <input
-                        type="checkbox"
-                        checked={editTeacherModal.hasAssignment2 || false}
-                        onChange={(e) => setEditTeacherModal({ ...editTeacherModal, hasAssignment2: e.target.checked })}
-                        className="w-4 h-4 rounded text-emerald-700"
-                      />
-                      <span>Assign Second Class (Optional)</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded-xl border border-emerald-100 space-y-1">
+                    <label className="block font-bold text-slate-800 text-[11px]">
+                      Assigned Class 1:
                     </label>
-                    {editTeacherModal.hasAssignment2 && (
-                      <span className="text-[10px] text-amber-700 font-bold">Class 2 Enabled</span>
-                    )}
+                    <select
+                      value={editTeacherModal.class1Id || '25'}
+                      onChange={(e) => setEditTeacherModal({ ...editTeacherModal, class1Id: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-emerald-700"
+                    >
+                      {CLASSES.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
 
-                  {editTeacherModal.hasAssignment2 && (
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-                      <div>
-                        <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Class</span>
-                        <select
-                          value={editTeacherModal.assignment2ClassId || '30'}
-                          onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment2ClassId: e.target.value })}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
-                        >
-                          {CLASSES.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">Wing / Section</span>
-                        <select
-                          value={editTeacherModal.assignment2Wing || 'Girls'}
-                          onChange={(e) => setEditTeacherModal({ ...editTeacherModal, assignment2Wing: e.target.value })}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-700"
-                        >
-                          <option value="Boys">Boys Wing</option>
-                          <option value="Girls">Girls Wing</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
+                  <div className="bg-white p-3 rounded-xl border border-emerald-100 space-y-1">
+                    <label className="block font-bold text-slate-800 text-[11px]">
+                      Assigned Class 2 <span className="text-slate-400 font-normal">(Optional)</span>:
+                    </label>
+                    <select
+                      value={editTeacherModal.class2Id || ''}
+                      onChange={(e) => setEditTeacherModal({ ...editTeacherModal, class2Id: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-emerald-700"
+                    >
+                      <option value="">None (1 class only)</option>
+                      {CLASSES.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 

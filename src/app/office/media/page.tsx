@@ -209,7 +209,7 @@ export default function OfficeMediaPage() {
         </div>
       ) : filteredMedia.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-3">
-          <FolderImage className="w-12 h-12 text-slate-300 mx-auto" />
+          <Images className="w-12 h-12 text-slate-300 mx-auto" />
           <h3 className="text-sm font-bold text-slate-800">No images in this category yet</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Use the upload box above to drag and drop or select images to store them in the {activeTab} section.

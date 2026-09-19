@@ -46,21 +46,17 @@ export async function GET(req: NextRequest) {
     });
     const teacherData = tRes.rows[0] ? { ...tRes.rows[0] } : null;
     if (teacherData) {
-      const assignedList = [];
-      if (teacherData.assigned_class_id && teacherData.assigned_section_id) {
+      const assignedList: Array<{ classId: number; className: string }> = [];
+      if (teacherData.assigned_class_id) {
         assignedList.push({
           classId: Number(teacherData.assigned_class_id),
-          className: String(teacherData.assigned_class_name || ''),
-          wing: String(teacherData.assigned_wing || 'Boys'),
-          sectionId: Number(teacherData.assigned_section_id)
+          className: String(teacherData.assigned_class_name || `Class ${teacherData.assigned_class_id}`)
         });
       }
-      if (teacherData.assigned_class_id_2 && teacherData.assigned_section_id_2) {
+      if (teacherData.assigned_class_id_2 && Number(teacherData.assigned_class_id_2) !== Number(teacherData.assigned_class_id)) {
         assignedList.push({
           classId: Number(teacherData.assigned_class_id_2),
-          className: String(teacherData.assigned_class_name_2 || ''),
-          wing: String(teacherData.assigned_wing_2 || 'Boys'),
-          sectionId: Number(teacherData.assigned_section_id_2)
+          className: String(teacherData.assigned_class_name_2 || `Class ${teacherData.assigned_class_id_2}`)
         });
       }
       (teacherData as any).assignedClassesList = assignedList;

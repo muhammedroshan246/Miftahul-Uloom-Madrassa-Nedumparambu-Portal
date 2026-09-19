@@ -101,29 +101,35 @@ export async function GET(req: NextRequest) {
     let classId = classIdParam && classIdParam !== 'All' ? Number(classIdParam) : (classes[0] ? Number(classes[0].id) : 25);
     let gender = genderParam ? genderParam.trim() : 'Boys';
 
-    // Role check if staff: ensure class+gender matches allowedSectionIds
+    // Role check if staff: ensure class matches assigned classes
     if (auth.user.role === 'STAFF') {
-      // If staff specified a classId or gender that does not match their assigned section, return 403 Forbidden
-      if (classIdParam || genderParam) {
+      const allowedClassRes = await db.execute({
+        sql: 'SELECT DISTINCT class_id FROM sections WHERE id IN (' + allowedSectionIds.map(() => '?').join(',') + ')',
+        args: allowedSectionIds
+      });
+      const allowedClassIds = allowedClassRes.rows.map((r: any) => Number(r.class_id));
+
+      if (classIdParam && classIdParam !== 'All') {
+        if (!allowedClassIds.includes(Number(classIdParam))) {
+          return NextResponse.json({ 
+            error: 'Access denied: You are only authorized to access fees for your assigned class.' 
+          }, { status: 403 });
+        }
+        classId = Number(classIdParam);
+      } else {
+        classId = allowedClassIds[0] || classId;
+      }
+
+      if (genderParam && genderParam !== 'All') {
         const secCheck = await db.execute({
-          sql: 'SELECT id FROM sections WHERE class_id = ? AND name = ? LIMIT 1',
-          args: [classId, gender]
+          sql: 'SELECT id FROM sections WHERE class_id = ? AND (name = ? OR gender = ?) LIMIT 1',
+          args: [classId, gender, gender]
         });
         const secId = secCheck.rows[0]?.id ? Number(secCheck.rows[0].id) : null;
         if (!secId || !allowedSectionIds.includes(secId)) {
           return NextResponse.json({ 
             error: 'Access denied: You are only authorized to access fees for your assigned class section.' 
           }, { status: 403 });
-        }
-      } else {
-        // Auto-default to their assigned section
-        const firstSec = await db.execute({
-          sql: 'SELECT s.id, s.class_id, s.name as gender FROM sections s WHERE s.id = ? LIMIT 1',
-          args: [allowedSectionIds[0]]
-        });
-        if (firstSec.rows.length > 0) {
-          classId = Number(firstSec.rows[0].class_id);
-          gender = String(firstSec.rows[0].gender);
         }
       }
     }

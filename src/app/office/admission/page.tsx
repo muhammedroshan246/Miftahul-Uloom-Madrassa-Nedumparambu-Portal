@@ -342,7 +342,7 @@ export default function NewAdmissionPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-700 outline-none bg-white font-semibold"
                   >
                     {CLASSES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c.id} value={c.name}>{c.name}</option>
                     ))}
                   </select>
                 </div>

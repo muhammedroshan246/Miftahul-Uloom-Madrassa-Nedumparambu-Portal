@@ -128,14 +128,15 @@ export async function GET(req: NextRequest) {
       sql: 'SELECT id, name, code, class_id, max_marks, pass_marks FROM subjects WHERE id = ?',
       args: [Number(subjectId)]
     });
-    const subMeta = subRes.rows[0] || {};
+    const subMeta: any = subRes.rows[0] || {};
 
     const examSubjectRes = await db.execute({
       sql: 'SELECT max_marks, pass_marks FROM exam_subjects WHERE exam_id = ? AND subject_id = ?',
       args: [Number(examId), Number(subjectId)]
     });
-    const maxMarks = examSubjectRes.rows[0]?.max_marks || subMeta.max_marks || 100;
-    const passMarks = examSubjectRes.rows[0]?.pass_marks || subMeta.pass_marks || 40;
+    const examSubjectRow: any = examSubjectRes.rows[0];
+    const maxMarks = examSubjectRow?.max_marks || subMeta.max_marks || 100;
+    const passMarks = examSubjectRow?.pass_marks || subMeta.pass_marks || 40;
 
     const res = await db.execute({
       sql: `
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
       sql: 'SELECT max_marks, pass_marks, name FROM subjects WHERE id = ?',
       args: [Number(subjectId)]
     });
-    const subMeta = subRes.rows[0] || {};
+    const subMeta: any = subRes.rows[0] || {};
     const configuredMaxMarks = Number(subMeta.max_marks) || 100;
     const configuredPassMarks = Number(subMeta.pass_marks) || 40;
 
